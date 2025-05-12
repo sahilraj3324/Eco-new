@@ -1,0 +1,29 @@
+﻿@using Ecocys.Admin.Core.Master
+@model IEnumerable<ProductVariant>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Image</th>
+            <th>Variant Name</th>
+            <th>Stock</th>
+            <th>Quantity</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td><img src="~/uploads/@item.ImageName" width="100" height="70" /></td>
+                <td>@Html.DisplayFor(modelItem => item.VariantValue)</td>
+                <td>@Html.DisplayFor(modelItem => item.Stock)</td>
+                <td>@Html.DisplayFor(modelItem => item.Quantity)</td>
+                <td>
+                    <a href="javascript:void(0)" onclick="AddUpdateProductVariant(@item.VariantId)">Edit</a> |
+                    <a href="javascript:void(0)" onclick="DeleteProductVariant(@item.VariantId)">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

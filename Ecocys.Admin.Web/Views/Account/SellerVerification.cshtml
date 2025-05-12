@@ -1,0 +1,167 @@
+﻿@using Ecocys.Admin.Core.Account
+@using Ecocys.Admin.Core.Master
+@model User
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link href="https://fonts.googleapis.com/css2?family=Satisfy" rel="stylesheet">
+<style>
+    #canvas-signature {
+        width: 100%;
+        height: 50px;
+        border: 1px solid lightgray;
+    }
+</style>
+<div class="row">
+    <div class="col-6">
+        <div class="step-header d-flex mb-4">
+            <span class="stepIndicator @(Model.TaxVerified?"active":"")">Tax Details</span>
+            <span class="stepIndicator @(Model.StoreVerified?"active":"")">Store & Pickup Details</span>
+            <span class="stepIndicator @(Model.BankVerified?"active":"")">Bank Details</span>
+        </div>
+        <ul class="nav nav-pills nav-secondary" id="nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="" data-bs-toggle="pill" data-action="TaxDetails">Tax Details</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="" data-bs-toggle="pill" data-action="StoreAndPickupDetails">Store & Pickup Details</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="" data-bs-toggle="pill" data-action="BankDetails">Bank Details</a>
+            </li>
+        </ul>
+        <div class="tab-content my-3">
+            <div class="tab-pane fade show active" id="tab-content">
+                @{
+                    if (Model.StoreVerified) await Html.RenderPartialAsync("BankDetails", new BankDetails { AccountNumber = "", IFSCCode = "" });
+                    else if (Model.TaxVerified) await Html.RenderPartialAsync("StoreAndPickupDetails", new StoreAndPickupDetails { FullName = "", SignatureImage = "", StoreName = "" });
+                    else await Html.RenderPartialAsync("TaxDetails", new User { Mobile = "", Password = new byte[] { }, UserType = "" });
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        var activeTab = {
+            refresh: () => { $('#nav-tabs .nav-link.active').click(); },
+            reset: () => { $('#nav-tabs .nav-link.active').removeData('key').removeData('value'); },
+            resetAndRefresh: () => { $('#nav-tabs .nav-link.active').removeData('key').removeData('value').click(); }
+        }
+        function AddUpdateStore(storeId) {
+            $('#btn-add-update').hide();
+            var type = storeId > 0 ? 'Edit' : 'Add';
+            $('#card-title').text(type + ' Store');
+            $.ajax({
+                url: '/Master/AddUpdateStore',
+                data: { storeId },
+                success: html => {
+                    $('#card-body').html(html);
+                }
+            })
+        }
+        function Edit(anchor) {
+            let key = $(anchor).data('key');
+            let value = $(anchor).data('value');
+            $('#nav-tabs .nav-link.active').data('key', key).data('value', value);
+            activeTab.refresh();
+        }
+        function DeleteStore(storeId) {
+            if (confirm('Are you sure? You want to delete this store.')) {
+                $.ajax({
+                    url: '/Master/DeleteStore',
+                    data: { storeId },
+                    success: res => {
+                        window.location.reload();
+                    }
+                })
+            }
+        }
+        function DeleteStoreLocation(locationId) {
+            if (confirm('Are you sure? You want to delete this location.')) {
+                $.ajax({
+                    url: '/Master/DeleteStoreLocation',
+                    data: { locationId },
+                    success: res => {
+                        activeTab.refresh();
+                    }
+                })
+            }
+        }
+        function DeleteStoreTiming(timingId) {
+            if (confirm('Are you sure? You want to delete this timing.')) {
+                $.ajax({
+                    url: '/Master/DeleteStoreTiming',
+                    data: { timingId },
+                    success: res => {
+                        activeTab.refresh();
+                    }
+                })
+            }
+        }
+        $("#tab-content").on('submit', '#form', function (event) {
+            debugger
+            event.preventDefault();
+            var formData = new FormData(this);
+            $.ajax({
+                type: "POST",
+                url: $(this).attr("action"),
+                contentType: false,
+                processData: false,
+                data: formData,
+                success: function (response) {
+                    $('#tab-content').html(response);
+                    // activeTab.reset();
+                },
+                error: function () {
+                    alert("An error occurred while submitting the form.");
+                }
+            })
+        })
+        $('#nav-tabs').on('click', '.nav-link', function () {
+            let action = $(this).data('action');
+            $.ajax({
+                url: `/Account/${action}`,
+                success: response => {
+                    $('#tab-content').html(response);
+                }
+            })
+        })
+        $('#tab-content').on('input', '#FullName', function () {
+            var fullName = $(this).val();
+            if (fullName.trim() !== '') {
+                $("#div-signature").css('display', 'block');
+            } else {
+                $("#div-signature").css('display', 'none');
+            }
+            const canvas = document.getElementById('canvas-signature');
+            canvas.height = canvas.offsetHeight;
+            canvas.width = canvas.offsetWidth;
+            const context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.font = 'italic 30px Satisfy, cursive';
+            context.textBaseline = 'middle';
+            context.textAlign = 'center';
+            context.fillStyle = '#000';
+            context.fillText(fullName, canvas.width / 2, canvas.height / 2);
+            if (fullName.trim() !== '') {
+                $('#SignatureImage').val(canvas.toDataURL('image/png'));
+            } else {
+                $('#SignatureImage').val('');
+            }
+        })
+        function GetNearbyMarketList() {
+            let cityId = $('#CityId').val();
+            $('#City').val($('#CityId option:selected').text());
+            $.ajax({
+                url: '/Master/GetNearbyMarketList?cityId=' + cityId,
+                success: function (response) {
+                    $('#NearbyMarket').html('<option value="">Select Nearby Market</option>');
+                    $.each(response, (i, item) => {
+                        $('#NearbyMarket').append(`<option value="${item.locationName}">${item.locationName}</option>`);
+                    })
+                }
+            });
+        }
+    </script>
+}

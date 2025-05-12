@@ -1,0 +1,27 @@
+﻿@using Ecocys.Admin.Core.Account
+@model BankDetails
+<form asp-controller="Account" asp-action="BankDetails" id="form" method="post">
+    <input type="hidden" asp-for="BankId" />
+
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <input type="text" class="form-control js-only-number" asp-for="AccountNumber" placeholder="Account Number" maxlength="20" required />
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <input type="text" class="form-control" asp-for="IFSCCode" placeholder="IFSC Code" maxlength="11" required />
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <button type="submit" class="btn btn-secondary" style="width:100%">Continue</button>
+            </div>
+        </div>
+    </div>
+</form>

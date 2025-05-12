@@ -1,0 +1,12 @@
+﻿@using Ecocys.Admin.Core.Master
+@model UserRole
+<form asp-controller="Master" asp-action="AddUpdateUserRole" method="post">
+    <input type="hidden" asp-for="RoleId" />
+
+    <div class="mb-3">
+        <label for="RoleName" class="form-label">Role Name</label>
+        <input type="text" class="form-control" asp-for="RoleName" required />
+    </div>
+
+    <button type="submit" class="btn btn-primary">@(Model?.RoleId > 0 ? "Update" : "Save")</button>
+</form>

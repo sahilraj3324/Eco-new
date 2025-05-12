@@ -1,0 +1,65 @@
+﻿@using Ecocys.Admin.Core.Account
+@model StoreAndPickupDetails
+<form asp-controller="Account" asp-action="StoreAndPickupDetails" id="form" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="StoreId" />
+    <input type="hidden" asp-for="SignatureImage" />
+
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <input type="text" class="form-control" asp-for="StoreName" placeholder="Store Name" maxlength="100" required />
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <input type="text" class="form-control" asp-for="DisplayName" placeholder="Display Name" maxlength="200" />
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <textarea class="form-control" asp-for="StoreDescription" placeholder="Store Description" rows="3" maxlength="500"></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <input type="text" class="form-control" asp-for="FullName" placeholder="Your Full Name" maxlength="50" required />
+            </div>
+        </div>
+    </div>
+    <div class="row" id="div-signature" style="display:none">
+        <div class="col-12">
+            <div class="form-group">
+                <label for="canvas-signature" class="form-label">Generated E-Signature</label>
+                <canvas id="canvas-signature"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <input type="text" class="form-control js-only-number" asp-for="PickupPincode" placeholder="Pickup Pincode" maxlength="6" required />
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="AgreedTAndC" required>
+                <label for="AgreedTAndC" class="form-check-label">I agree to comply with Ecocys.</label>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <button type="submit" class="btn btn-secondary" style="width:100%">Continue</button>
+            </div>
+        </div>
+    </div>
+</form>

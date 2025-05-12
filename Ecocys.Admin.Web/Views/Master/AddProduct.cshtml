@@ -1,0 +1,155 @@
+﻿@using Ecocys.Admin.Core.Master
+@{
+    ViewData["Title"] = "AddProduct";
+    var categories = ViewBag.Categories as List<Category>;
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header" id="card-header">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="Category" class="form-label">Category</label>
+                        <select class="form-control" id="Category">
+                            <option value="">Select Category</option>
+                            @foreach (var item in categories ?? new List<Category>())
+                            {
+                                <option value="@item.CategoryId">@item.CategoryName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" id="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            @* <div class="card-header">
+                                <h5 class="card-title">Select Category</h5>
+                            </div> *@
+                            <div class="card-body card-scroll">
+                                <ul class="selectable-list cat2" id="ul-l2-categories"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body card-scroll">
+                                <ul class="selectable-list cat3" id="ul-l3-categories"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body card-scroll">
+                                <ul class="selectable-list cat4" id="ul-l4-categories"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#Category').on('change',function(){
+            let select = $(this);
+            let categoryId = select.val();
+            $('#ul-l2-categories,#ul-l3-categories,#ul-l4-categories').empty();
+            $.ajax({
+                url: '/Master/GetCategoriesByLevel?level=L2&categoryId=' + categoryId,
+                success: function (response) {
+                    $.each(response, (i, item) => {
+                        $('#ul-l2-categories').append(`<li b-50r4iki17y data-id="${item.categoryId}">${item.categoryName}</li>`);
+                    })
+                }
+            })
+        })
+            $('#ul-l2-categories').on('click','li',function () {
+                let thisli=$(this);
+                let categoryId=thisli.data('id');
+                let selectedli=thisli.closest('ul').find('li.selected');
+                let sCategoryId=selectedli.data('id');
+                if(categoryId!=sCategoryId){
+                    thisli.siblings('li').removeClass("selected");
+                thisli.addClass("selected");
+            $('#ul-l3-categories,#ul-l4-categories').empty();
+            $.ajax({
+                url: '/Master/GetCategoriesByLevel?level=L3&categoryId=' + categoryId,
+                success: function (response) {
+                    $.each(response, (i, item) => {
+                        $('#ul-l3-categories').append(`<li b-50r4iki17y data-id="${item.categoryId}">${item.categoryName}</li>`);
+                    })
+                }
+            })
+                }
+            })
+            $('#ul-l3-categories').on('click','li',function () {
+                let thisli=$(this);
+                let categoryId=thisli.data('id');
+                let selectedli=thisli.closest('ul').find('li.selected');
+                let sCategoryId=selectedli.data('id');
+                if(categoryId!=sCategoryId){
+                    thisli.siblings('li').removeClass("selected");
+                thisli.addClass("selected");
+                $('#ul-l4-categories').empty();
+            $.ajax({
+                url: '/Master/GetCategoriesByLevel?level=L4&categoryId=' + categoryId,
+                success: function (response) {
+                    $.each(response, (i, item) => {
+                        $('#ul-l4-categories').append(`<li b-50r4iki17y data-id="${item.categoryId}">${item.categoryName}</li>`);
+                    })
+                }
+            })
+                }
+            })
+            $('#ul-l4-categories').on('click','li',function () {
+                let thisli=$(this);
+                let categoryId=thisli.data('id');
+                let selectedli=thisli.closest('ul').find('li.selected');
+                let sCategoryId=selectedli.data('id');
+                if(categoryId!=sCategoryId){
+                    thisli.siblings('li').removeClass("selected");
+                thisli.addClass("selected");
+                $.ajax({
+                url: '/Master/AddUpdateProduct',
+                data:{categoryId},
+                success: html => {
+                    $('#card-header').empty();
+                    $('#card-body').html(html);
+                }
+            })
+                }
+            })
+            $('#card-body').on('input', '.pricing', function () {
+            var input = $(this);
+            var id = $(this).attr('id');
+
+            var price = Number($('#Price').val());
+            var discountPer = Number($('#DiscountPercentage').val());
+            var discountAmt = Number($('#DiscountAmount').val());
+            if (id == 'DiscountPercentage') {
+                discountAmt = price * discountPer / 100;
+                $('#DiscountAmount').val(discountAmt);
+                price -= discountAmt;
+            }
+            if (id == 'DiscountAmount') {
+                $('#DiscountPercentage').val('');
+                price -= discountAmt;
+            }
+            var actualPrice = price;
+            $('#ActualPrice').val(actualPrice);
+            var gstPer = Number($('#GSTPercentage').val());
+            var gstAmount = actualPrice * gstPer / 100;
+            $('#GSTAmount').val(gstAmount);
+            var finalPrice = actualPrice + gstAmount;
+            $('#FinalPrice').val(finalPrice);
+        })
+        })
+    </script>
+}

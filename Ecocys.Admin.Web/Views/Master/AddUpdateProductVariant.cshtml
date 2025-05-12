@@ -1,0 +1,108 @@
+﻿@using Ecocys.Admin.Core.Master
+@model ProductVariant
+@{
+    var categories = ViewBag.Categories as List<Category>;
+    var products = ViewBag.Products as List<Product>;
+}
+<form asp-controller="Master" asp-action="AddUpdateProductVariant" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="VariantId" />
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="CategoryId" class="form-label">Category</label>
+            <select class="form-control" asp-for="CategoryId" onchange="GetProductsByCategory()" required>
+                <option value="">Select Category</option>
+                @foreach (var item in categories ?? new List<Category>())
+                {
+                    <option value="@item.CategoryId">@item.CategoryName</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-6">
+            <label for="ParentId" class="form-label">Product</label>
+            <select class="form-control" asp-for="ProductId" required>
+                <option value="">Select Product</option>
+                @foreach (var item in products ?? new List<Product>())
+                {
+                    <option value="@item.ProductId">@item.ProductName</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="VariantValue" class="form-label">Variant Name</label>
+            <input type="text" class="form-control" asp-for="VariantValue" required />
+        </div>
+        <div class="col-6">
+            <label for="File" class="form-label">Image</label>
+            <input type="file" class="form-control" id="File" name="File" @(Model?.VariantId > 0 ? "" : "required") />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6" @(Model?.VariantId == 0 ? "hidden" : "")>
+            <label for="Quantity" class="form-label">Available Quantity</label>
+            <input type="number" class="form-control" asp-for="Quantity" required />
+        </div>
+        <div class="col-6" @(Model?.VariantId > 0 ? "hidden" : "")>
+            <label for="Stock" class="form-label">Stock(Total Quantity)</label>
+            <input type="number" class="form-control" asp-for="Stock" required />
+        </div>
+        <div class="col-6">
+            <label for="Price" class="form-label">Price(MRP)</label>
+            <input type="number" class="form-control pricing" asp-for="Price" required />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="DiscountPercentage" class="form-label">Discount(%)</label>
+            <input type="number" class="form-control pricing" asp-for="DiscountPercentage" />
+        </div>
+
+        <div class="col-6">
+            <label for="DiscountAmount" class="form-label">Discount Amount</label>
+            <input type="number" class="form-control pricing" asp-for="DiscountAmount" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="ActualPrice" class="form-label">Actual Price</label>
+        <input type="number" class="form-control" asp-for="ActualPrice" readonly />
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="CGSTPercentage" class="form-label">CGST(%)</label>
+            <input type="number" class="form-control pricing" asp-for="CGSTPercentage" />
+        </div>
+
+        <div class="col-6">
+            <label for="CGSTAmount" class="form-label">CGST Amount</label>
+            <input type="number" class="form-control" asp-for="CGSTAmount" readonly />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="SGSTPercentage" class="form-label">SGST(%)</label>
+            <input type="number" class="form-control pricing" asp-for="SGSTPercentage" />
+        </div>
+
+        <div class="col-6">
+            <label for="SGSTAmount" class="form-label">SGST Amount</label>
+            <input type="number" class="form-control" asp-for="SGSTAmount" readonly />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="FinalPrice" class="form-label">Final Price</label>
+        <input type="number" class="form-control" asp-for="FinalPrice" readonly />
+    </div>
+
+    <button type="submit" class="btn btn-primary">@(Model?.VariantId > 0 ? "Update" : "Save")</button>
+    <a asp-controller="Master" asp-action="ProductVariant" class="btn btn-danger">Cancel</a>
+</form>

@@ -1,0 +1,49 @@
+﻿@{
+    ViewData["Title"] = "User Role";
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-6 align-self-center">
+                        <div class="card-title">User Role</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal" onclick="AddUpdateUserRole(0)">Add Role</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @await Component.InvokeAsync("UserRoleList")
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function AddUpdateUserRole(roleId) {
+            var type = roleId > 0 ? 'Edit' : 'Add';
+            $('#modal-title').text(type + ' User Role');
+            $.ajax({
+                url: '/Master/AddUpdateUserRole',
+                data: { roleId },
+                success: html => {
+                    $('#modal-body').html(html);
+                }
+            })
+        }
+        function DeleteUserRole(roleId) {
+            if (confirm('Are you sure? You want to delete this role.')) {
+                $.ajax({
+                    url: '/Master/DeleteUserRole',
+                    data: { roleId },
+                    success: res => {
+                        window.location.reload();
+                    }
+                })
+            }
+        }
+    </script>
+}

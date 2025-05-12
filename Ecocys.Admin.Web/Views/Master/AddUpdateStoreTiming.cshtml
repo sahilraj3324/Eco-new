@@ -1,0 +1,55 @@
+﻿@using Ecocys.Admin.Core.Master
+@model StoreTiming
+@{
+    var storeTimings = ViewBag.StoreTimings as List<StoreTiming>;
+}
+<form asp-controller="Master" asp-action="AddUpdateStoreTiming" id="form" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="StoreId" />
+    <input type="hidden" asp-for="TimingId" />
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="OpeningDays" class="form-label">Opening Days</label>
+            <input type="text" class="form-control" asp-for="OpeningDays" maxlength="100" required />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="OpeningTime" class="form-label">Opening Time</label>
+            <input type="time" class="form-control" asp-for="OpeningTime" required />
+        </div>
+        <div class="col-6">
+            <label for="ClosingTime" class="form-label">Closing Time</label>
+            <input type="time" class="form-control" asp-for="ClosingTime" required />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-secondary">@(Model?.TimingId > 0 ? "Update" : "Save")</button>
+    <a href="javaScript:void(0)" class="btn btn-danger" onclick="activeTab.resetAndRefresh()">Cancel</a>
+</form>
+
+<table class="table table-bordered mt-3">
+    <thead>
+        <tr>
+            <th>Opening Days</th>
+            <th>Opening Time</th>
+            <th>Closing Time</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in storeTimings ?? new())
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.OpeningDays)</td>
+                <td>@Html.DisplayFor(modelItem => item.OpeningTime)</td>
+                <td>@Html.DisplayFor(modelItem => item.ClosingTime)</td>
+                <td>
+                    <a href="javascript:void(0)" data-key="timingId" data-value="@item.TimingId" onclick="Edit(this)">Edit</a> |
+                    <a href="javascript:void(0)" onclick="DeleteStoreTiming(@item.TimingId)">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

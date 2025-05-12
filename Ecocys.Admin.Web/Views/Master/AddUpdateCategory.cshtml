@@ -1,0 +1,54 @@
+﻿@using Ecocys.Admin.Core.Master
+@model Category
+@{
+    var isSubCat = Model?.CategoryId > 0 && Model?.ParentCategoryId > 0;
+}
+<form asp-controller="Master" asp-action="AddUpdateCategory" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="CategoryId" />
+
+    <div class="mb-3">
+        <label for="CategoryName" class="form-label">Category Name</label>
+        <input type="text" class="form-control" asp-for="CategoryName" required />
+    </div>
+
+    <div class="mb-3">
+        <label for="Description" class="form-label">Description</label>
+        <textarea class="form-control" asp-for="Description"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="File" class="form-label">Image</label>
+        <input type="file" class="form-control" id="File" name="File" @(Model?.CategoryId > 0 ? "" : "required") />
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check form-check-inline m-0 pb-0">
+            <label class="form-check-label"><input type="radio" class="form-check-input" asp-for="Level" value="L1" data-level="L0" checked> Level 1</label>
+        </div>
+        <div class="form-check form-check-inline m-0 pb-0">
+            <label class="form-check-label"><input type="radio" class="form-check-input" asp-for="Level" value="L2" data-level="L1"> Level 2</label>
+        </div>
+        <div class="form-check form-check-inline m-0 pb-0">
+            <label class="form-check-label"><input type="radio" class="form-check-input" asp-for="Level" value="L3" data-level="L2"> Level 3</label>
+        </div>
+        <div class="form-check form-check-inline m-0 pb-0">
+            <label class="form-check-label"><input type="radio" class="form-check-input" asp-for="Level" value="L4" data-level="L3"> Level 4</label>
+        </div>
+    </div>
+
+    <div class="mb-3 @(!isSubCat?"d-none":"")" id="div-parent-category">
+        <label for="ParentCategoryId" class="form-label">Parent Category</label>
+        <select class="form-control" asp-for="ParentCategoryId">
+            @if (isSubCat)
+            {
+                <option value="@Model?.ParentCategoryId">@ViewBag.SubCategory</option>
+            }
+            else
+            {
+                <option value="">Select Parent Category</option>
+            }
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">@(Model?.CategoryId > 0 ? "Update" : "Save")</button>
+</form>

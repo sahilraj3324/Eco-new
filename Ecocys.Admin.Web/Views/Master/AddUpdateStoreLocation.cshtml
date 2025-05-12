@@ -1,0 +1,87 @@
+﻿@using Ecocys.Admin.Core.Master
+@model StoreLocation
+@{
+    var cityList = ViewBag.CityList as List<City>;
+    var nearbyMarketList = ViewBag.NearbyMarketList as List<Location>;
+    var storeLocations = ViewBag.StoreLocations as List<StoreLocation>;
+}
+<form asp-controller="Master" asp-action="AddUpdateStoreLocation" id="form" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="City" />
+    <input type="hidden" asp-for="StoreId" />
+    <input type="hidden" asp-for="LocationId" />
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="Address" class="form-label">Address</label>
+            <input type="text" class="form-control" asp-for="Address" maxlength="250" required />
+        </div>
+        <div class="col-6">
+            <label for="PostalCode" class="form-label">Area Pincode</label>
+            <input type="text" class="form-control js-only-number" asp-for="PostalCode" value="@(Model.PostalCode>0?Model.PostalCode:"")" maxlength="6" required />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="CityId" class="form-label">City</label>
+            <select class="form-control" asp-for="CityId" onchange="GetNearbyMarketList()" required>
+                <option value="">Select City</option>
+                @foreach (var item in cityList ?? new())
+                {
+                    <option value="@item.CityId">@item.CityName</option>
+                }
+            </select>
+        </div>
+        <div class="col-6">
+            <label for="NearbyMarket" class="form-label">Nearby Market</label>
+            <select class="form-control" asp-for="NearbyMarket" required>
+                <option value="">Select Nearby Market</option>
+                @foreach (var item in nearbyMarketList ?? new())
+                {
+                    <option value="@item.LocationName">@item.LocationName</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="Latitude" class="form-label">Latitude</label>
+            <input type="text" class="form-control js-only-lat-long" asp-for="Latitude" value="@(Model.Latitude>0?Model.Latitude:"")" maxlength="11" required />
+        </div>
+        <div class="col-6">
+            <label for="Longitude" class="form-label">Longitude</label>
+            <input type="text" class="form-control js-only-lat-long" asp-for="Longitude" value="@(Model.Longitude>0?Model.Longitude:"")" maxlength="11" required />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-secondary">@(Model?.LocationId > 0 ? "Update" : "Save")</button>
+    <a href="javaScript:void(0)" class="btn btn-danger" onclick="activeTab.resetAndRefresh()">Cancel</a>
+</form>
+
+<table class="table table-bordered mt-3">
+    <thead>
+        <tr>
+            <th>Address</th>
+            <th>Area Pincode</th>
+            <th>City</th>
+            <th>Nearby Market</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in storeLocations ?? new())
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.Address)</td>
+                <td>@Html.DisplayFor(modelItem => item.PostalCode)</td>
+                <td>@Html.DisplayFor(modelItem => item.City)</td>
+                <td>@Html.DisplayFor(modelItem => item.NearbyMarket)</td>
+                <td>
+                    <a href="javascript:void(0)" data-key="locationId" data-value="@item.LocationId" onclick="Edit(this)">Edit</a> |
+                    <a href="javascript:void(0)" onclick="DeleteStoreLocation(@item.LocationId)">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

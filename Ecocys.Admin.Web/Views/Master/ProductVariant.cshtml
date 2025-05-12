@@ -1,0 +1,90 @@
+﻿@{
+    ViewData["Title"] = "Product Variant";
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-6 align-self-center">
+                        <div class="card-title" id="card-title">Product Variant</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button type="button" class="btn btn-primary" id="btn-add-update" onclick="AddUpdateProductVariant(0)">Add Product Variant</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" id="card-body">
+                @await Component.InvokeAsync("ProductVariantList")
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $('#card-body').on('input', '.pricing', function () {
+            var input = $(this);
+            var id = $(this).attr('id');
+
+            var price = Number($('#Price').val());
+            var discountPer = Number($('#DiscountPercentage').val());
+            var discountAmt = Number($('#DiscountAmount').val());
+            if (id == 'DiscountPercentage') {
+                discountAmt = price * discountPer / 100;
+                $('#DiscountAmount').val(discountAmt);
+                price -= discountAmt;
+            }
+            if (id == 'DiscountAmount') {
+                $('#DiscountPercentage').val('');
+                price -= discountAmt;
+            }
+            var actualPrice = price;
+            $('#ActualPrice').val(actualPrice);
+            var cgstPer = Number($('#CGSTPercentage').val());
+            var sgstPer = Number($('#SGSTPercentage').val());
+            var cgstAmount = actualPrice * cgstPer / 100;
+            var sgstAmount = actualPrice * sgstPer / 100;
+            $('#CGSTAmount').val(cgstAmount);
+            $('#SGSTAmount').val(sgstAmount);
+            var finalPrice = actualPrice + cgstAmount + sgstAmount;
+            $('#FinalPrice').val(finalPrice);
+        })
+        function GetProductsByCategory() {
+            var categoryId = $('#CategoryId').val();
+            $('#ProductId').html('<option value="">Select Product</option>');
+            $.ajax({
+                url: '/Master/GetProductsByCategory',
+                data: { categoryId },
+                success: data => {
+                    $.each(data, (i, item) => {
+                        $('#ProductId').append(`<option value="${item.productId}">${item.productName}</option>`);
+                    })
+                }
+            })
+        }
+        function AddUpdateProductVariant(variantId) {
+            $('#btn-add-update').hide();
+            var type = variantId > 0 ? 'Edit' : 'Add';
+            $('#card-title').text(type + ' Product Variant');
+            $.ajax({
+                url: '/Master/AddUpdateProductVariant',
+                data: { variantId },
+                success: html => {
+                    $('#card-body').html(html);
+                }
+            })
+        }
+        function DeleteProductVariant(variantId) {
+            if (confirm('Are you sure? You want to delete this product variant.')) {
+                $.ajax({
+                    url: '/Master/DeleteProductVariant',
+                    data: { variantId },
+                    success: res => {
+                        window.location.reload();
+                    }
+                })
+            }
+        }
+    </script>
+}

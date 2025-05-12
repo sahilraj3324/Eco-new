@@ -1,0 +1,70 @@
+﻿@using Ecocys.Admin.Core.Master
+@model Store
+<form asp-controller="Master" asp-action="AddUpdateStoreDetails" id="form" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="StoreId" />
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="StoreName" class="form-label">Store Name</label>
+            <input type="text" class="form-control" asp-for="StoreName" maxlength="200" required />
+        </div>
+        <div class="col-6">
+            <label for="StoreType" class="form-label">Store Type</label>
+            <select class="form-control" asp-for="StoreType" required>
+                <option value="">Select Store Type</option>
+                <option value="Grocery">Grocery</option>
+                <option value="Restaurant">Restaurant</option>
+                <option value="Cafe">Cafe</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Stationary">Stationary</option>
+                <option value="Fasion">Fasion</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Hardware">Hardware</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="OwnerName" class="form-label">Owner Name</label>
+            <input type="text" class="form-control" asp-for="OwnerName" maxlength="100" required />
+        </div>
+        <div class="col-6">
+            <label for="Email" class="form-label">Email</label>
+            <input type="email" class="form-control" asp-for="Email" maxlength="100" required />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="MobileNumber" class="form-label">Mobile Number</label>
+            <input type="text" class="form-control js-only-number" asp-for="MobileNumber" maxlength="10" required />
+        </div>
+        <div class="col-6">
+            <label for="AlternateMobileNumber" class="form-label">Alternate Mobile Number</label>
+            <input type="text" class="form-control js-only-number" asp-for="AlternateMobileNumber" maxlength="10" />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            <label for="ImageFile" class="form-label">Store Image</label>
+            <input type="file" class="form-control" id="ImageFile" name="ImageFile" @(Model?.StoreId > 0 ? "" : "required") />
+        </div>
+        <div class="col-6">
+            <label for="BannerFile" class="form-label">Store Banner</label>
+            <input type="file" class="form-control" id="BannerFile" name="BannerFile" />
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-12">
+            <label for="Description" class="form-label">Description</label>
+            <textarea class="form-control" asp-for="Description"></textarea>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-secondary">@(Model?.StoreId > 0 ? "Update" : "Save")</button>
+    <a asp-controller="Master" asp-action="Store" class="btn btn-danger">Cancel</a>
+</form>

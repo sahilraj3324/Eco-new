@@ -1,0 +1,23 @@
+﻿@using Ecocys.Admin.Core.Master
+@model User
+<form asp-controller="Account" asp-action="VerifyTaxDetails" id="form" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="UserId" />
+
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="GSTIN" name="GSTIN" placeholder="GSTIN" maxlength="20" required />
+                    <button class="btn btn-secondary" type="submit">Verify</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <button type="submit" class="btn btn-secondary" style="width:100%">Continue</button>
+            </div>
+        </div>
+    </div>
+</form>

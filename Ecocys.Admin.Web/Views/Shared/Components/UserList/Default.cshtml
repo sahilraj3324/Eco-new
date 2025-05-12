@@ -1,0 +1,52 @@
+﻿@using Ecocys.Admin.Core.Master
+@model IEnumerable<User>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>User Name</th>
+            <th>Mobile</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.UserName</td>
+                <td>
+                    @(string.Concat(item.ISDCode, " ", item.Mobile, " "))
+                    @if (item.IsMobileVerified)
+                    {
+                        <i class="fa fa-check-circle text-success" title="Verified"></i>
+                    }
+                    else
+                    {
+                        <i class="fa fa-exclamation-circle text-danger" title="Un-verified"></i>
+                    }
+                </td>
+                <td>
+                    @item.Email
+                    @if (!string.IsNullOrEmpty(item.Email))
+                    {
+                        if (item.IsMobileVerified)
+                        {
+                            <i class="fa fa-check-circle text-success" title="Verified"></i>
+                        }
+                        else
+                        {
+                            <i class="fa fa-exclamation-circle text-danger" title="Un-verified"></i>
+                        }
+                    }
+                </td>
+                <td>@item.Status</td>
+                <td>
+                    <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#modal" onclick="AddUpdateUser(@item.UserId)">Edit</a> |
+                    <a href="javascript:void(0)" onclick="DeleteUser(@item.UserId)">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

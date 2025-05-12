@@ -1,0 +1,29 @@
+﻿@using Ecocys.Admin.Core.Master
+@model User
+
+<form asp-controller="Master" asp-action="AddUpdateUser" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="UserId" />
+    <input type="hidden" asp-for="UserType" value="Admin" />
+
+    <div class="mb-3">
+        <label for="UserName" class="form-label">User Name</label>
+        <input type="text" class="form-control" asp-for="UserName" maxlength="50" required />
+    </div>
+
+    <div class="mb-3">
+        <label for="Mobile" class="form-label">Mobile</label>
+        <input type="text" class="form-control js-only-number" asp-for="Mobile" maxlength="10" required />
+    </div>
+
+    <div class="mb-3">
+        <label for="Email" class="form-label">Email</label>
+        <input type="text" class="form-control" asp-for="Email" maxlength="150" />
+    </div>
+
+    <div class="mb-3">
+        <label for="Password" class="form-label">Password</label>
+        <input type="password" class="form-control" asp-for="Password" value="@ViewBag.Password" maxlength="16" required />
+    </div>
+
+    <button type="submit" class="btn btn-primary">@(Model?.UserId > 0 ? "Update" : "Save")</button>
+</form>

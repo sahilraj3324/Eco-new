@@ -1,0 +1,49 @@
+﻿@{
+    ViewData["Title"] = "Product";
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-6 align-self-center">
+                        <div class="card-title">Product</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal" onclick="AddUpdateProduct(0)">Add Product</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @await Component.InvokeAsync("ProductList")
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function AddUpdateProduct(productId) {
+            var type = productId > 0 ? 'Edit' : 'Add';
+            $('#modal-title').text(type + ' Product');
+            $.ajax({
+                url: '/Master/AddUpdateProduct',
+                data: { productId },
+                success: html => {
+                    $('#modal-body').html(html);
+                }
+            })
+        }
+        function DeleteProduct(productId) {
+            if (confirm('Are you sure? You want to delete this product.')) {
+                $.ajax({
+                    url: '/Master/DeleteProduct',
+                    data: { productId },
+                    success: res => {
+                        window.location.reload();
+                    }
+                })
+            }
+        }
+    </script>
+}

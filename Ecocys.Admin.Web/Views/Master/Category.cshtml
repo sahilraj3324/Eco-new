@@ -1,0 +1,69 @@
+﻿@{
+    ViewData["Title"] = "Category";
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-6 align-self-center">
+                        <div class="card-title">Category</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal" onclick="AddUpdateCategory(0)">Add Category</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @await Component.InvokeAsync("CategoryList")
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $('#modal-body').on('change','[name="Level"]', function () {
+            let radio = $('[name="Level"]:checked');
+            if(radio.val()=='L1'){
+                $('#div-parent-category').addClass('d-none');
+                $('#ParentCategoryId').prop('required',false);
+            }
+            else{
+                $('#div-parent-category').removeClass('d-none');
+                $('#ParentCategoryId').prop('required',true);
+            }
+            $('#ParentCategoryId').html('<option value="">Select Parent Category</option>');
+            $.ajax({
+                url: '/Master/GetLevelWiseCategories?level=' + radio.data('level'),
+                success: function (response) {
+                    $.each(response, (i, item) => {
+                        $('#ParentCategoryId').append(`<option value="${item.categoryId}">${item.categoryName}</option>`);
+                    })
+                }
+            });
+        })
+        function AddUpdateCategory(categoryId) {
+            var type = categoryId > 0 ? 'Edit' : 'Add';
+            $('#modal-title').text(type + ' Category');
+            $.ajax({
+                url: '/Master/AddUpdateCategory',
+                data: { categoryId },
+                success: html => {
+                    $('#modal-body').html(html);
+                }
+            })
+        }
+        function DeleteCategory(categoryId) {
+            if (confirm('Are you sure? You want to delete this category.')) {
+                $.ajax({
+                    url: '/Master/DeleteCategory',
+                    data: { categoryId },
+                    success: res => {
+                        window.location.reload();
+                    }
+                })
+            }
+        }
+    </script>
+}

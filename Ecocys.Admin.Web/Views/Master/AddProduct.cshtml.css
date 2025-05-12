@@ -1,0 +1,26 @@
+﻿.card-scroll {
+    height: 300px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.selectable-list {
+    padding: 0;
+    list-style-type: none;
+}
+
+    .selectable-list li {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #ddd;
+        transition: background-color 0.3s;
+    }
+
+        .selectable-list li:hover {
+            background-color: #d3d3d366;
+        }
+
+        .selectable-list li.selected {
+            color: white;
+            background-color: #6861CE;
+        }

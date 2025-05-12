@@ -1,0 +1,38 @@
+﻿@using Ecocys.Admin.Core.Master
+@model LoginRequest
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-5">
+        <form asp-controller="Account" asp-action="Login" method="post">
+            <div class="form-group">
+                <div class="card-title">Welcome to Ecocys</div>
+                <div class="card-category m-0">Create account to start selling</div>
+            </div>
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa fa-envelope"></i></span>
+                    <input type="text" class="form-control" asp-for="Email" placeholder="Email" maxlength="50" required />
+                </div>
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <div class="input-icon">
+                    <span class="input-icon-addon"><i class="fa fa-lock"></i></span>
+                    <input type="password" class="form-control" asp-for="Password" placeholder="Password" maxlength="16" required />
+                    <span class="input-icon-addon" style="cursor:pointer" onclick="ShowHidePassword(this)"><i class="fa fa-eye"></i></span>
+                </div>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-secondary" style="width:100%"><span class="btn-label"><i class="fa fa-user"></i></span> Login</button>
+            </div>
+            <div class="text-center">Don't have account click here to <a asp-action="Register">Register</a></div>
+        </form>
+    </div>
+    <div class="col-7">
+    </div>
+</div>

@@ -1,0 +1,149 @@
+﻿@using Ecocys.Admin.Core.Master
+@model User
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-5">
+        <form asp-controller="Account" asp-action="Register" method="post">
+            <input type="hidden" asp-for="UserType" value="Seller" />
+            <input type="hidden" asp-for="IsEmailVerified" required />
+            <input type="hidden" asp-for="IsMobileVerified" required />
+            <div class="form-group">
+                <div class="card-title">Welcome to Ecocys</div>
+                <div class="card-category m-0">Create account to start selling</div>
+            </div>
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <div class="input-group">
+                    <span class="input-group-text">+91</span>
+                    <input type="text" class="form-control js-only-number" asp-for="Mobile" placeholder="Mobile" maxlength="10" required />
+                    <button class="btn btn-secondary" type="button" id="btn-send-otp-mobile">Send OTP</button>
+                </div>
+                <span asp-validation-for="Mobile" id="span-mobile-error" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <div class="input-group" style="display:none" id="div-mobile-otp">
+                    <input type="text" class="form-control js-only-number" asp-for="MobileOTP" placeholder="Mobile OTP" maxlength="6" required />
+                    <button class="btn btn-success" type="button" id="btn-submit-otp-mobile">Submit</button>
+                </div>
+                <span asp-validation-for="MobileOTP" id="span-mobile-otp-error" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa fa-envelope"></i></span>
+                    <input type="text" class="form-control" asp-for="Email" placeholder="Email" maxlength="50" required />
+                    <button class="btn btn-secondary" type="button" id="btn-send-otp-email">Send OTP</button>
+                </div>
+                <span asp-validation-for="Email" id="span-email-error" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <div class="input-group" style="display:none" id="div-email-otp">
+                    <input type="text" class="form-control js-only-number" asp-for="EmailOTP" placeholder="Email OTP" maxlength="6" required />
+                    <button class="btn btn-success" type="button" id="btn-submit-otp-email">Submit</button>
+                </div>
+                <span asp-validation-for="EmailOTP" id="span-email-otp-error" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <div class="input-icon">
+                    <span class="input-icon-addon"><i class="fa fa-lock"></i></span>
+                    <input type="password" class="form-control" asp-for="Password" placeholder="Password" maxlength="16" required />
+                    <span class="input-icon-addon" style="cursor:pointer" onclick="ShowHidePassword(this)"><i class="fa fa-eye"></i></span>
+                </div>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-secondary" id="btn-create-account" style="width:100%" disabled><span class="btn-label"><i class="fa fa-user"></i></span> Create Account</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-7">
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $('#btn-send-otp-mobile').on('click', function () {
+            $('#span-mobile-error').hide();
+            let mobile = $('#Mobile').val();
+            if (mobile == '') $('#span-mobile-error').text('Please enter mobile number.').show();
+            else if (mobile.length < 10) $('#span-mobile-error').text('Invalid mobile number.').show();
+            else {
+                $('#Mobile').prop('readonly', true);
+                $('#btn-send-otp-mobile').prop('disabled', true);
+                $.ajax({
+                    url: '/Account/SendOtpOnMobile',
+                    data: { mobile },
+                    success: res => {
+                        $('#div-mobile-otp').css('display', '');
+                    }
+                })
+            }
+        });
+        $('#btn-submit-otp-mobile').on('click', function () {
+            let model = {
+                otp: $('#MobileOTP').val(),
+                contact: '+91 ' + $('#Mobile').val()
+            }
+            if (model.otp == '') $('#span-mobile-otp-error').text('Please enter otp.').show();
+            else if (model.otp.length < 6) $('#span-mobile-otp-error').text('Invalid otp.').show();
+            else {
+                $('#span-mobile-otp-error').hide();
+                $.ajax({
+                    url: '/Account/VerifyOTP',
+                    data: model,
+                    success: res => {
+                        if (res.verified) {
+                            $('#IsMobileVerified').val(true);
+                            $('#div-mobile-otp').css('display', 'none');
+                            if (Boolean($('#IsMobileVerified').val()) && Boolean($('#IsEmailVerified').val())) $('#btn-create-account').removeAttr('disabled');
+                        } else {
+                            $('#span-mobile-otp-error').text(res.message).show();
+                        }
+                    }
+                })
+            }
+        });
+        $('#btn-send-otp-email').on('click', function () {
+            $('#span-email-error').hide();
+            let email = $('#Email').val();
+            if (email == '') $('#span-email-error').text('Please enter email.').show();
+            else {
+                $('#Email').prop('readonly', true);
+                $('#btn-send-otp-email').prop('disabled', true);
+                $.ajax({
+                    url: '/Account/SendOtpOnEmail',
+                    data: { email },
+                    success: res => {
+                        $('#div-email-otp').css('display', '');
+                    }
+                })
+            }
+        });
+        $('#btn-submit-otp-email').on('click', function () {
+            let model = {
+                otp: $('#EmailOTP').val(),
+                contact: $('#Email').val()
+            }
+            if (model.otp == '') $('#span-email-otp-error').text('Please enter otp.').show();
+            else if (model.otp.length < 6) $('#span-email-otp-error').text('Invalid otp.').show();
+            else {
+                $('#span-email-otp-error').hide();
+                $.ajax({
+                    url: '/Account/VerifyOTP',
+                    data: model,
+                    success: res => {
+                        if (res.verified) {
+                            $('#IsEmailVerified').val(true);
+                            $('#div-email-otp').css('display', 'none');
+                            if (Boolean($('#IsMobileVerified').val()) && Boolean($('#IsEmailVerified').val())) $('#btn-create-account').removeAttr('disabled');
+                        } else {
+                            $('#span-email-otp-error').text(res.message).show();
+                        }
+                    }
+                })
+            }
+        });
+    </script>
+}

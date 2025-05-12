@@ -1,0 +1,23 @@
+﻿@using Ecocys.Admin.Core.Master
+@model IEnumerable<UserRole>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Role</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.RoleName)</td>
+                <td>
+                    <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#modal" onclick="AddUpdateUserRole(@item.RoleId)">Edit</a> |
+                    <a href="javascript:void(0)" onclick="DeleteProduct(@item.RoleId)">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

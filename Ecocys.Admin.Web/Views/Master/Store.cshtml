@@ -1,0 +1,130 @@
+﻿@{
+    ViewData["Title"] = "Store";
+}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-6 align-self-center">
+                        <div class="card-title" id="card-title">Store</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <button type="button" class="btn btn-primary" id="btn-add-update" onclick="AddUpdateStore(0)">Add Store</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" id="card-body">
+                @await Component.InvokeAsync("StoreList")
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var activeTab = {
+            refresh: () => { $('#pills-tab .nav-link.active').click(); },
+            reset: () => { $('#pills-tab .nav-link.active').removeData('key').removeData('value'); },
+            resetAndRefresh: () => { $('#pills-tab .nav-link.active').removeData('key').removeData('value').click(); }
+        }
+        function AddUpdateStore(storeId) {
+            $('#btn-add-update').hide();
+            var type = storeId > 0 ? 'Edit' : 'Add';
+            $('#card-title').text(type + ' Store');
+            $.ajax({
+                url: '/Master/AddUpdateStore',
+                data: { storeId },
+                success: html => {
+                    $('#card-body').html(html);
+                }
+            })
+        }
+        function Edit(anchor) {
+            let key = $(anchor).data('key');
+            let value = $(anchor).data('value');
+            $('#pills-tab .nav-link.active').data('key', key).data('value', value);
+            activeTab.refresh();
+        }
+        function DeleteStore(storeId) {
+            if (confirm('Are you sure? You want to delete this store.')) {
+                $.ajax({
+                    url: '/Master/DeleteStore',
+                    data: { storeId },
+                    success: res => {
+                        window.location.reload();
+                    }
+                })
+            }
+        }
+        function DeleteStoreLocation(locationId) {
+            if (confirm('Are you sure? You want to delete this location.')) {
+                $.ajax({
+                    url: '/Master/DeleteStoreLocation',
+                    data: { locationId },
+                    success: res => {
+                        activeTab.refresh();
+                    }
+                })
+            }
+        }
+        function DeleteStoreTiming(timingId) {
+            if (confirm('Are you sure? You want to delete this timing.')) {
+                $.ajax({
+                    url: '/Master/DeleteStoreTiming',
+                    data: { timingId },
+                    success: res => {
+                        activeTab.refresh();
+                    }
+                })
+            }
+        }
+        $("#card-body").on('submit', '#form', function (event) {
+            event.preventDefault();
+            var formData = new FormData(this);
+            $.ajax({
+                type: "POST",
+                url: $(this).attr("action"),
+                contentType: false,
+                processData: false,
+                data: formData,
+                success: function (response) {
+                    $('#pills-store').html(response);
+                    activeTab.reset();
+                },
+                error: function () {
+                    alert("An error occurred while submitting the form.");
+                }
+            })
+        })
+        $('#card-body').on('click', '.nav-link', function () {
+            let action = $(this).data('action');
+            let storeId = $('#StoreId').val();
+            let queryString = '';
+            if ($(this).data('key')) {
+                let key = $(this).data('key');
+                let value = $(this).data('value');
+                queryString += `&${key}=${value}`;
+            }
+            $.ajax({
+                url: `/Master/${action}?storeId=${storeId}${queryString}`,
+                success: response => {
+                    $('#pills-store').html(response);
+                }
+            })
+        })
+        function GetNearbyMarketList() {
+            let cityId = $('#CityId').val();
+            $('#City').val($('#CityId option:selected').text());
+            $.ajax({
+                url: '/Master/GetNearbyMarketList?cityId=' + cityId,
+                success: function (response) {
+                    $('#NearbyMarket').html('<option value="">Select Nearby Market</option>');
+                    $.each(response, (i, item) => {
+                        $('#NearbyMarket').append(`<option value="${item.locationName}">${item.locationName}</option>`);
+                    })
+                }
+            });
+        }
+    </script>
+}

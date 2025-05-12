@@ -1,0 +1,27 @@
+﻿@using Ecocys.Admin.Core.Master
+@model IEnumerable<Product>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Product Name</th>
+            <th>Company Name</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.ProductName)</td>
+                <td>@Html.DisplayFor(modelItem => item.CompanyName)</td>
+                <td>@Html.DisplayFor(modelItem => item.Description)</td>
+                <td>
+                    <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#modal" onclick="AddUpdateProduct(@item.ProductId)">Edit</a> |
+                    <a href="javascript:void(0)" onclick="DeleteProduct(@item.ProductId)">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
