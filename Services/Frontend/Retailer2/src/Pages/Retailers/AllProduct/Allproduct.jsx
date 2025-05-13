@@ -1,5 +1,3 @@
-// This updated version enables dynamic filters for your product listing page
-// NOTE: Ensure this code is added inside your AllProductsPage component
 
 import { useEffect, useState } from "react";
 import axios from "axios";
