@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard' },
@@ -11,28 +11,50 @@ const navItems = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
+  
+  // Close sidebar when route changes (mobile navigation)
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location])
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen overflow-hidden bg-gray-100">
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-20 bg-black bg-opacity-50 transition-opacity lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
       <div
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed inset-y-0 left-0 z-30 w-64 transform bg-cyan-500 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0`}
+        } fixed inset-y-0 left-0 z-30 w-64 transform overflow-y-auto bg-cyan-600 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0`}
       >
-        <div className="flex h-16 items-center justify-center border-b border-cyan-400">
+        <div className="flex h-16 items-center justify-between border-b border-cyan-500 px-6">
           <h1 className="text-xl font-bold text-white">Eco Admin</h1>
+          <button 
+            className="text-white lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        <nav className="mt-5 space-y-1 px-2">
+        <nav className="mt-5 space-y-2 px-3">
           {navItems.map((item) => (
             <NavLink
               key={item.name}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center rounded-md px-4 py-2 text-sm font-medium ${
+                `flex items-center rounded-md px-4 py-3 text-sm font-medium ${
                   isActive
-                    ? 'bg-cyan-600 text-white'
-                    : 'text-white hover:bg-cyan-600'
+                    ? 'bg-cyan-700 text-white'
+                    : 'text-white hover:bg-cyan-700'
                 }`
               }
             >
@@ -49,7 +71,8 @@ export default function Layout() {
           <div className="flex h-16 items-center justify-between px-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-gray-500 focus:outline-none lg:hidden"
+              className="rounded-md p-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 lg:hidden"
+              aria-label="Open sidebar"
             >
               <svg
                 className="h-6 w-6"
@@ -66,7 +89,7 @@ export default function Layout() {
                 ></path>
               </svg>
             </button>
-            <div className="text-xl font-semibold text-gray-700">Admin Panel</div>
+            <div className="text-xl font-semibold text-gray-700 lg:pl-0">Admin Panel</div>
             <div className="flex items-center">
               <span className="text-sm text-gray-700">Admin User</span>
             </div>

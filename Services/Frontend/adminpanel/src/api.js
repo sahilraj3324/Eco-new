@@ -1,7 +1,26 @@
 import axios from 'axios';
 
-// API base URL - adjust this based on your backend URL
-const API_URL = '/api';
+// API base URL options
+const PROXY_URL = '/api';
+const DIRECT_URL = 'https://localhost:7209/api';
+
+// Create axios instances
+const proxyAxios = axios.create({
+  baseURL: PROXY_URL,
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const directAxios = axios.create({
+  baseURL: DIRECT_URL,
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*'
+  }
+});
 
 // Configuration helper for authenticated requests
 const authConfig = () => {
@@ -14,12 +33,30 @@ const authConfig = () => {
   };
 };
 
+// Helper function to try both proxy and direct approaches
+const tryBothApproaches = async (config) => {
+  try {
+    // Try proxy first
+    console.log('Trying proxy approach:', config.url);
+    return await proxyAxios(config);
+  } catch (proxyError) {
+    console.log('Proxy approach failed, trying direct:', proxyError.message);
+    try {
+      // Fall back to direct if proxy fails
+      return await directAxios(config);
+    } catch (directError) {
+      console.log('Direct approach also failed:', directError.message);
+      throw directError; // Re-throw the last error
+    }
+  }
+};
+
 // Product API calls
 export const productApi = {
   // Get all products
   getAll: async () => {
     try {
-      const response = await axios.get(`${API_URL}/Product/get-all`);
+      const response = await axios.get(`${PROXY_URL}/Product/get-all`);
       return response.data;
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -30,8 +67,37 @@ export const productApi = {
   // Get products by seller ID
   getBySeller: async (sellerId) => {
     try {
-      const response = await axios.get(`${API_URL}/Product/get-by-seller/${sellerId}`);
-      return response.data;
+      console.log(sellerId);
+      
+      // Try both proxy and direct approaches with multiple endpoints
+      const endpoints = [
+        `/Product/get-by-seller/${sellerId}`,
+        `/Product/getBySeller/${sellerId}`,
+        `/Product/seller/${sellerId}`,
+        `/Product/bySeller/${sellerId}`,
+        `/Products/seller/${sellerId}`
+      ];
+      
+      let lastError = null;
+      
+      // Try each endpoint with both proxy and direct approaches
+      for (const endpoint of endpoints) {
+        console.log(`Trying endpoint: ${endpoint}`);
+        try {
+          const response = await tryBothApproaches({
+            method: 'get',
+            url: endpoint
+          });
+          console.log(`Success with endpoint: ${endpoint}`);
+          return response.data;
+        } catch (error) {
+          console.log(`Failed with endpoint: ${endpoint}`, error.message);
+          lastError = error;
+        }
+      }
+      
+      // If we get here, all attempts failed
+      throw lastError || new Error('Failed to fetch products');
     } catch (error) {
       console.error(`Error fetching products for seller ${sellerId}:`, error);
       throw error;
@@ -41,7 +107,7 @@ export const productApi = {
   // Get a single product by ID
   getById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/Product/${id}`);
+      const response = await axios.get(`${PROXY_URL}/Product/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
@@ -52,7 +118,7 @@ export const productApi = {
   // Add a new product
   add: async (productData) => {
     try {
-      const response = await axios.post(`${API_URL}/Product/add`, productData, authConfig());
+      const response = await axios.post(`${PROXY_URL}/Product/add`, productData, authConfig());
       return response.data;
     } catch (error) {
       console.error('Error adding product:', error);
@@ -63,7 +129,7 @@ export const productApi = {
   // Add multiple products
   addBulk: async (productsData) => {
     try {
-      const response = await axios.post(`${API_URL}/Product/add/bulk`, productsData, authConfig());
+      const response = await axios.post(`${PROXY_URL}/Product/add/bulk`, productsData, authConfig());
       return response.data;
     } catch (error) {
       console.error('Error adding bulk products:', error);
@@ -74,7 +140,16 @@ export const productApi = {
   // Update a product
   update: async (id, productData) => {
     try {
-      const response = await axios.put(`${API_URL}/Product/update/${id}`, productData, authConfig());
+      // We're already formatting the data correctly in the component
+      // Just ensure the Id is set properly and matches the URL parameter
+      const dataToSend = {
+        ...productData,
+        Id: id // Ensure Id is uppercase to match C# model
+      };
+      
+      console.log('API sending data:', dataToSend);
+      
+      const response = await axios.put(`${PROXY_URL}/Product/update/${id}`, dataToSend, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);
@@ -85,7 +160,7 @@ export const productApi = {
   // Delete a product
   delete: async (id) => {
     try {
-      const response = await axios.delete(`${API_URL}/Product/delete/${id}`, authConfig());
+      const response = await axios.delete(`${PROXY_URL}/Product/delete/${id}`, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error deleting product ${id}:`, error);
@@ -96,7 +171,7 @@ export const productApi = {
   // Delete all products
   deleteAll: async () => {
     try {
-      const response = await axios.delete(`${API_URL}/Product/delete-all`, authConfig());
+      const response = await axios.delete(`${PROXY_URL}/Product/delete-all`, authConfig());
       return response.data;
     } catch (error) {
       console.error('Error deleting all products:', error);
@@ -110,7 +185,7 @@ export const orderApi = {
   // Place a new order
   place: async (orderData) => {
     try {
-      const response = await axios.post(`${API_URL}/Order`, orderData, authConfig());
+      const response = await axios.post(`${PROXY_URL}/Order`, orderData, authConfig());
       return response.data;
     } catch (error) {
       console.error('Error placing order:', error);
@@ -121,7 +196,7 @@ export const orderApi = {
   // Get orders by buyer ID
   getByBuyer: async (buyerId) => {
     try {
-      const response = await axios.get(`${API_URL}/Order/buyer/${buyerId}`, authConfig());
+      const response = await axios.get(`${PROXY_URL}/Order/buyer/${buyerId}`, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error fetching orders for buyer ${buyerId}:`, error);
@@ -132,7 +207,7 @@ export const orderApi = {
   // Get orders by seller ID
   getBySeller: async (sellerId) => {
     try {
-      const response = await axios.get(`${API_URL}/Order/seller/${sellerId}`, authConfig());
+      const response = await axios.get(`${PROXY_URL}/Order/seller/${sellerId}`, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error fetching orders for seller ${sellerId}:`, error);
@@ -143,7 +218,7 @@ export const orderApi = {
   // Update order status
   updateStatus: async (orderId, newStatus) => {
     try {
-      const response = await axios.put(`${API_URL}/Order/${orderId}/status`, JSON.stringify(newStatus), authConfig());
+      const response = await axios.put(`${PROXY_URL}/Order/${orderId}/status`, JSON.stringify(newStatus), authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error updating order ${orderId} status:`, error);
@@ -154,7 +229,7 @@ export const orderApi = {
   // Delete all orders for a seller
   deleteAllBySeller: async (sellerId) => {
     try {
-      const response = await axios.delete(`${API_URL}/Order/seller/${sellerId}/all`, authConfig());
+      const response = await axios.delete(`${PROXY_URL}/Order/seller/${sellerId}/all`, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error deleting all orders for seller ${sellerId}:`, error);
@@ -165,7 +240,7 @@ export const orderApi = {
   // Delete all orders
   deleteAll: async () => {
     try {
-      const response = await axios.delete(`${API_URL}/Order/all`, authConfig());
+      const response = await axios.delete(`${PROXY_URL}/Order/all`, authConfig());
       return response.data;
     } catch (error) {
       console.error('Error deleting all orders:', error);
@@ -179,7 +254,7 @@ export const sellerApi = {
   // Register a new seller
   signup: async (sellerData) => {
     try {
-      const response = await axios.post(`${API_URL}/Seller/signup`, sellerData);
+      const response = await axios.post(`${PROXY_URL}/Seller/signup`, sellerData);
       return response.data;
     } catch (error) {
       console.error('Error during seller signup:', error);
@@ -190,7 +265,7 @@ export const sellerApi = {
   // Log in a seller
   login: async (credentials) => {
     try {
-      const response = await axios.post(`${API_URL}/Seller/login`, credentials);
+      const response = await axios.post(`${PROXY_URL}/Seller/login`, credentials);
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('seller', JSON.stringify(response.data.seller));
@@ -205,7 +280,7 @@ export const sellerApi = {
   // Get all sellers
   getAll: async () => {
     try {
-      const response = await axios.get(`${API_URL}/Seller/get-all`, authConfig());
+      const response = await axios.get(`${PROXY_URL}/Seller/get-all`, authConfig());
       return response.data;
     } catch (error) {
       console.error('Error fetching all sellers:', error);
@@ -216,7 +291,7 @@ export const sellerApi = {
   // Get seller by ID
   getById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/Seller/get/${id}`, authConfig());
+      const response = await axios.get(`${PROXY_URL}/Seller/get/${id}`, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error fetching seller ${id}:`, error);
@@ -227,7 +302,7 @@ export const sellerApi = {
   // Update seller
   update: async (id, sellerData) => {
     try {
-      const response = await axios.put(`${API_URL}/Seller/update/${id}`, sellerData, authConfig());
+      const response = await axios.put(`${PROXY_URL}/Seller/update/${id}`, sellerData, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error updating seller ${id}:`, error);
@@ -238,7 +313,7 @@ export const sellerApi = {
   // Delete seller
   delete: async (id) => {
     try {
-      const response = await axios.delete(`${API_URL}/Seller/delete/${id}`, authConfig());
+      const response = await axios.delete(`${PROXY_URL}/Seller/delete/${id}`, authConfig());
       return response.data;
     } catch (error) {
       console.error(`Error deleting seller ${id}:`, error);
@@ -253,11 +328,154 @@ export const sellerApi = {
   }
 };
 
+// Buyer/Retailer API calls
+export const buyerApi = {
+  // Get all buyers
+  getAll: async () => {
+    try {
+      console.log("Fetching all buyers");
+      const response = await tryBothApproaches({
+        method: 'get',
+        url: '/Buyer/get-all'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching buyers:', error);
+      throw error;
+    }
+  },
+
+  // Get buyer by ID
+  getById: async (id) => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'get', 
+        url: `/Buyer/get/${id}`
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching buyer ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Update buyer status
+  updateStatus: async (id, status) => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'put',
+        url: `/Buyer/update-status/${id}`,
+        data: { status },
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating buyer status:`, error);
+      throw error;
+    }
+  }
+};
+
+// Diagnostic Functions
+export const diagnosticApi = {
+  checkConnection: async () => {
+    const results = {
+      proxy: { status: 'unknown', error: null },
+      direct: { status: 'unknown', error: null },
+      sellerEndpoint: { status: 'unknown', error: null },
+      productEndpoint: { status: 'unknown', error: null }
+    };
+    
+    // Test proxy
+    try {
+      const proxyResponse = await axios.get(`${PROXY_URL}/Seller/get-all`);
+      results.proxy.status = proxyResponse.status;
+      results.proxy.data = proxyResponse.data;
+    } catch (error) {
+      results.proxy.status = error.response?.status || 'failed';
+      results.proxy.error = error.message;
+    }
+    
+    // Test direct connection
+    try {
+      const directResponse = await directAxios.get('/Seller/get-all');
+      results.direct.status = directResponse.status;
+      results.direct.data = directResponse.data;
+    } catch (error) {
+      results.direct.status = error.response?.status || 'failed';
+      results.direct.error = error.message;
+    }
+    
+    return results;
+  },
+  
+  // Test product API specifically
+  testProductApi: async (sellerId) => {
+    const results = {
+      proxy: { status: 'unknown', error: null },
+      direct: { status: 'unknown', error: null },
+      altEndpoints: []
+    };
+    
+    // Test via proxy
+    try {
+      const response = await axios.get(`${PROXY_URL}/Product/get-by-seller/${sellerId}`);
+      results.proxy.status = response.status;
+      results.proxy.data = response.data;
+    } catch (error) {
+      results.proxy.status = error.response?.status || 'failed';
+      results.proxy.error = error.message;
+    }
+    
+    // Test via direct connection
+    try {
+      const response = await directAxios.get(`/Product/get-by-seller/${sellerId}`);
+      results.direct.status = response.status;
+      results.direct.data = response.data;
+    } catch (error) {
+      results.direct.status = error.response?.status || 'failed';
+      results.direct.error = error.message;
+    }
+    
+    // Try alternative endpoints
+    const altEndpoints = [
+      `/Product/getBySeller/${sellerId}`,
+      `/Product/seller/${sellerId}`,
+      `/Product/bySeller/${sellerId}`,
+      `/Products/seller/${sellerId}`,
+      `/Products/get-by-seller/${sellerId}`
+    ];
+    
+    for (const endpoint of altEndpoints) {
+      try {
+        const response = await directAxios.get(endpoint);
+        results.altEndpoints.push({
+          endpoint,
+          status: response.status,
+          success: response.status >= 200 && response.status < 300,
+          data: response.data
+        });
+      } catch (error) {
+        results.altEndpoints.push({
+          endpoint,
+          status: error.response?.status || 'failed',
+          success: false,
+          error: error.message
+        });
+      }
+    }
+    
+    return results;
+  }
+};
+
 // Export a combined API object
 const api = {
   product: productApi,
   order: orderApi,
-  seller: sellerApi
+  seller: sellerApi,
+  buyer: buyerApi,
+  diagnostic: diagnosticApi
 };
 
 export default api; 

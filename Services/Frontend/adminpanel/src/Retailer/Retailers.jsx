@@ -1,48 +1,90 @@
 import { useState, useEffect } from 'react'
-
-// Mock data - would be replaced with API calls
-const mockRetailers = [
-  { id: 1, name: 'Green Market', email: 'info@greenmarket.com', status: 'Active', ordersCount: 156, joinDate: '2023-01-15' },
-  { id: 2, name: 'Eco Shop', email: 'support@ecoshop.com', status: 'Active', ordersCount: 89, joinDate: '2023-02-22' },
-  { id: 3, name: 'Sustainable Living', email: 'hello@sustainableliving.com', status: 'Blocked', ordersCount: 42, joinDate: '2023-03-10' },
-  { id: 4, name: 'Planet Friendly', email: 'contact@planetfriendly.com', status: 'Active', ordersCount: 118, joinDate: '2023-04-05' },
-  { id: 5, name: 'Bio Retail', email: 'info@bioretail.com', status: 'Active', ordersCount: 73, joinDate: '2023-05-17' },
-  { id: 6, name: 'Eco Bazaar', email: 'hello@ecobazaar.com', status: 'Blocked', ordersCount: 29, joinDate: '2023-06-30' },
-  { id: 7, name: 'Green Life Store', email: 'sales@greenlifestore.com', status: 'Active', ordersCount: 104, joinDate: '2023-07-12' },
-]
+import api from '../api'
 
 export default function Retailers() {
   const [retailers, setRetailers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [orderCounts, setOrderCounts] = useState({})
 
-  // Simulate API call
+  // Fetch retailers data from API
   useEffect(() => {
-    setLoading(true)
-    setTimeout(() => {
-      setRetailers(mockRetailers)
-      setLoading(false)
-    }, 500)
+    const fetchRetailers = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const retailersData = await api.buyer.getAll()
+        
+        // Handle different API response formats
+        const retailersArray = Array.isArray(retailersData) 
+          ? retailersData 
+          : (retailersData?.value || [])
+        
+        console.log('Retailers fetched:', retailersArray)
+        setRetailers(retailersArray)
+        
+        // Fetch order counts for each retailer
+        const orderCountsObj = {}
+        await Promise.all(
+          retailersArray.map(async (retailer) => {
+            try {
+              // Use the Order/buyer/{buyerId} endpoint to fetch orders
+              const orderData = await api.order.getByBuyer(retailer.id)
+              const orders = Array.isArray(orderData) 
+                ? orderData 
+                : (orderData?.value || [])
+              
+              orderCountsObj[retailer.id] = orders.length
+            } catch (err) {
+              console.error(`Error fetching orders for buyer ${retailer.id}:`, err)
+              orderCountsObj[retailer.id] = 0
+            }
+          })
+        )
+        
+        setOrderCounts(orderCountsObj)
+      } catch (err) {
+        console.error('Error fetching retailers:', err)
+        setError(err.message || 'Failed to fetch retailers')
+        setRetailers([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRetailers()
   }, [])
 
-  const toggleRetailerStatus = (id) => {
-    setRetailers(retailers.map(retailer => {
-      if (retailer.id === id) {
-        const newStatus = retailer.status === 'Active' ? 'Blocked' : 'Active'
-        return { ...retailer, status: newStatus }
-      }
-      return retailer
-    }))
+  const toggleRetailerStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'Active' ? 'Blocked' : 'Active'
+    
+    try {
+      // Update status in the backend
+      await api.buyer.updateStatus(id, newStatus)
+      
+      // Update local state if API call succeeds
+      setRetailers(retailers.map(retailer => {
+        if (retailer.id === id) {
+          return { ...retailer, status: newStatus }
+        }
+        return retailer
+      }))
+    } catch (err) {
+      console.error('Error updating retailer status:', err)
+      alert(`Failed to ${newStatus === 'Active' ? 'activate' : 'block'} retailer: ${err.message}`)
+    }
   }
 
   const filteredRetailers = retailers.filter(retailer => {
     const matchesSearch = 
-      retailer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      retailer.email.toLowerCase().includes(searchTerm.toLowerCase())
+      retailer.storename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      retailer.email?.toLowerCase().includes(searchTerm.toLowerCase())
     
     if (statusFilter === 'all') return matchesSearch
-    return matchesSearch && retailer.status.toLowerCase() === statusFilter.toLowerCase()
+    return matchesSearch && retailer.status?.toLowerCase() === statusFilter.toLowerCase()
   })
 
   const getStatusBadgeClass = (status) => {
@@ -82,6 +124,22 @@ export default function Retailers() {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-md bg-red-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="mt-2 text-sm text-red-700">{error}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-8">
           <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-cyan-500"></div>
@@ -92,19 +150,22 @@ export default function Retailers() {
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Retailer
+                  Store Name
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Email
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Status
+                  Phone
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  GST Number
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Orders
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Join Date
+                  Address
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Actions
@@ -116,25 +177,27 @@ export default function Retailers() {
                 filteredRetailers.map((retailer) => (
                   <tr key={retailer.id} className="hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{retailer.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{retailer.storename}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       <div className="text-sm text-gray-500">{retailer.email}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getStatusBadgeClass(retailer.status)}`}>
-                        {retailer.status}
-                      </span>
+                      <div className="text-sm text-gray-500">{retailer.phoneNumber}</div>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-gray-500">{retailer.gstNumber}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {retailer.ordersCount}
+                      {orderCounts[retailer.id] || 0}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {retailer.joinDate}
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-gray-500">{retailer.address}</div>
+                      <div className="text-xs text-gray-400">PIN: {retailer.pincode}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm">
                       <button
-                        onClick={() => toggleRetailerStatus(retailer.id)}
+                        onClick={() => toggleRetailerStatus(retailer.id, retailer.status)}
                         className={`rounded px-3 py-1 text-xs font-medium text-white ${
                           retailer.status === 'Active' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
                         }`}
@@ -146,8 +209,8 @@ export default function Retailers() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                    No retailers found
+                  <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
+                    {error ? 'Error loading retailers' : 'No retailers found'}
                   </td>
                 </tr>
               )}
