@@ -84,6 +84,28 @@ const ProductDetails = () => {
     }
   };
 
+  // Wishlist function
+  const handleAddToWishlist = () => {
+    if (!product) return;
+    // For demo: store wishlist in localStorage as an array
+    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    // Avoid duplicates
+    if (!wishlist.find(item => item.id === product.id)) {
+      wishlist.push({
+        id: product.id,
+        title: product.name,
+        price: `₹${product.price}`,
+        originalPrice: product.originalPrice ? `₹${product.originalPrice}` : '',
+        discount: product.discount || '',
+        image: product.imageUrls?.[0] || '',
+        rating: product.rating || 0,
+      });
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    }
+    alert('Added to wishlist!');
+    navigate('/wishlist');
+  };
+
   // Single dummy review data
   const dummyReview = {
     id: 1,
@@ -227,7 +249,8 @@ const ProductDetails = () => {
               Add To Cart
             </button>
             <button
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-full text-sm font-semibold transition-colors"
+              onClick={handleAddToWishlist}
+              className="flex-1 bg-gray-200 hover:bg-orange-500 hover:text-white text-gray-800 py-3 rounded-full text-sm font-semibold transition-colors"
             >
               Add To Wishlist
             </button>
