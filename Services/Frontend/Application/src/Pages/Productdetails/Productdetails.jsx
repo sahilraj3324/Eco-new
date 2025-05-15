@@ -52,6 +52,12 @@ const ProductDetail = () => {
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-6 lg:p-10">
       {/* Thumbnail Images */}
+      
+
+      {/* Main Image */}
+      <div className="flex-1 flex justify-center items-start">
+        <img src={mainImage} alt="Main Product" className="w-full max-w-md rounded-xl shadow-lg object-contain" />
+      </div>
       <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible w-full lg:w-auto">
         {product.imageUrls?.map((img, idx) => (
           <img
@@ -62,11 +68,6 @@ const ProductDetail = () => {
             className={`w-20 h-20 object-cover rounded-md cursor-pointer border-2 ${mainImage === img ? 'border-orange-500' : 'border-transparent'}`}
           />
         ))}
-      </div>
-
-      {/* Main Image */}
-      <div className="flex-1 flex justify-center items-start">
-        <img src={mainImage} alt="Main Product" className="w-full max-w-md rounded-xl shadow-lg object-contain" />
       </div>
 
       {/* Product Info */}
