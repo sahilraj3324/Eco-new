@@ -76,7 +76,7 @@ const NewProductsSection = () => {
                   Recently Added
                 </div>
                 <img
-                  src={product.image || shirtImg}
+                  src={product.mainImage }
                   alt={product.name}
                   className="w-full h-30 rounded-xl object-contain"
                 />

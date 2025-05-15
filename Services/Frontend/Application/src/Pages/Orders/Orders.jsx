@@ -4,6 +4,7 @@ import axios from 'axios';
 import productImg from '../../assets/men shirts.png';
 import cartImg from '../../assets/cart.png';
 import logoImg from '../../assets/shop vector icon.png';
+import NewProductsSection from '../Homepage/NewProducts';
 
 const MyOrders = () => {
   const [activeTab, setActiveTab] = useState('Active');
@@ -155,29 +156,8 @@ const MyOrders = () => {
       )}
 
       {/* New Products */}
-      <div className="text-base font-bold my-5 text-gray-700">New Products</div>
-      <div className="grid grid-cols-2 gap-3 w-full">
-        {dummyProducts.map((product, idx) => (
-          <div
-            key={idx}
-            className="bg-white rounded-xl p-2 shadow-sm text-xs cursor-pointer"
-          >
-            <div className="relative">
-              <img
-                src={product.image}
-                alt="Product"
-                className="w-full h-[120px] rounded-lg mb-1 object-cover"
-              />
-              <div className="bg-yellow-300 text-gray-800 text-[10px] font-bold py-0.5 px-1.5 rounded absolute top-2 left-2">
-                {product.tag}
-              </div>
-            </div>
-            <div><strong>{product.name}</strong></div>
-            <div>Sold by: {product.seller}</div>
-            <div>{product.price}</div>
-          </div>
-        ))}
-      </div>
+      <NewProductsSection />
+     
 
       {/* Trending Products */}
       <div className="text-base font-bold my-5 text-gray-700">Trending Products</div>
