@@ -149,7 +149,7 @@ export default function VendorProducts() {
             </div>
           </div>
           <Link
-            to={`/products/add?vendorId=${vendorId}`}
+            to={`/products/add/${vendorId}`}
             className="rounded-md bg-cyan-500 px-4 py-2 text-white hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
           >
             Add Product
@@ -200,7 +200,7 @@ export default function VendorProducts() {
               </p>
               <div className="mt-6">
                 <Link
-                  to={`/products/add?vendorId=${vendorId}`}
+                  to={`/products/add/${vendorId}`}
                   className="inline-flex items-center rounded-md border border-transparent bg-cyan-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
                 >
                   <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

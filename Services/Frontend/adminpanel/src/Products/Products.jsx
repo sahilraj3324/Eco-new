@@ -349,12 +349,12 @@ export default function Products() {
               </svg>
             </div>
           </div>
-          <Link 
+          {/* <Link 
             to="/products/add"
             className="flex justify-center rounded-md bg-cyan-500 px-4 py-2 text-white hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
           >
             Add Product
-          </Link>
+          </Link> */}
         </div>
       </div>
 
