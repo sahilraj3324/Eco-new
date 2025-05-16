@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import fallbackImage from './shirtimage.png';
 import NewProducts from '../Home/Newproduct';
-import { Star, StarHalf, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Star, StarHalf, Upload, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -15,6 +15,7 @@ const ProductDetails = () => {
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -85,25 +86,38 @@ const ProductDetails = () => {
   };
 
   // Wishlist function
-  const handleAddToWishlist = () => {
+
+  const handleAddToWishlist = async () => {
     if (!product) return;
-    // For demo: store wishlist in localStorage as an array
-    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-    // Avoid duplicates
-    if (!wishlist.find(item => item.id === product.id)) {
-      wishlist.push({
-        id: product.id,
-        title: product.name,
-        price: `₹${product.price}`,
-        originalPrice: product.originalPrice ? `₹${product.originalPrice}` : '',
-        discount: product.discount || '',
-        image: product.imageUrls?.[0] || '',
-        rating: product.rating || 0,
+    setWishlistLoading(true);
+    const userId = localStorage.getItem('Id') || 'guest-user';
+    const wishlistItem = {
+      Id: crypto.randomUUID(),
+      UserId: userId,
+      ProductId: product.id,
+      Product: product,
+      AddedAt: new Date().toISOString()
+    };
+    try {
+      const res = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(wishlistItem),
       });
-      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert('Failed to add to wishlist: ' + (errorData.message || 'Unknown error'));
+        setWishlistLoading(false);
+        return;
+      }
+      alert('Added to wishlist!');
+      navigate('/wishlist');
+    } catch (error) {
+      console.error('Error adding to wishlist:', error);
+      alert('Error adding to wishlist!');
+    } finally {
+      setWishlistLoading(false);
     }
-    alert('Added to wishlist!');
-    navigate('/wishlist');
   };
 
   // Single dummy review data
@@ -250,9 +264,13 @@ const ProductDetails = () => {
             </button>
             <button
               onClick={handleAddToWishlist}
-              className="flex-1 bg-gray-200 hover:bg-orange-500 hover:text-white text-gray-800 py-3 rounded-full text-sm font-semibold transition-colors"
+              className="flex-1 bg-gray-200 hover:bg-orange-500 hover:text-white text-gray-800 py-3 rounded-full text-sm font-semibold transition-colors flex items-center justify-center"
+              disabled={wishlistLoading}
             >
-              Add To Wishlist
+              {wishlistLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              ) : null}
+              {wishlistLoading ? 'Adding...' : 'Add To Wishlist'}
             </button>
           </div>
 
