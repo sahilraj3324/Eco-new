@@ -1,46 +1,77 @@
-import React, { useState } from "react";
-import { Heart, ShoppingCart, Trash2, ArrowRight } from "lucide-react";
-
-const initialWishlist = [
-  {
-    id: 1,
-    title: "Vintage Denim Jacket",
-    price: "₹1,299",
-    originalPrice: "₹1,999",
-    discount: "35% OFF",
-    image: "https://via.placeholder.com/300x300?text=Denim+Jacket",
-    rating: 4.5,
-  },
-  {
-    id: 2,
-    title: "Premium Running Sneakers",
-    price: "₹2,499",
-    originalPrice: "₹3,299",
-    discount: "25% OFF",
-    image: "https://via.placeholder.com/300x300?text=Sneakers",
-    rating: 4.8,
-  },
-  {
-    id: 3,
-    title: "Genuine Leather Backpack",
-    price: "₹999",
-    originalPrice: "₹1,499",
-    discount: "33% OFF",
-    image: "https://via.placeholder.com/300x300?text=Backpack",
-    rating: 4.2,
-  },
-];
+import React, { useEffect, useState } from "react";
+import { Heart, ShoppingCart, Trash2, ArrowRight, Loader2 } from "lucide-react";
 
 const WishlistPage = () => {
-  const [wishlist, setWishlist] = useState(initialWishlist);
+  const [wishlist, setWishlist] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isRemoving, setIsRemoving] = useState(null);
+  const [isAddingToCart, setIsAddingToCart] = useState(null);
+  const userId = localStorage.getItem("Id") || "dummy-user-123";
 
-  const removeFromWishlist = (id) => {
-    setWishlist(wishlist.filter((item) => item.id !== id));
+  useEffect(() => {
+    fetchWishlist();
+    // eslint-disable-next-line
+  }, [userId]);
+
+  const fetchWishlist = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/Wishlist/user/${userId}`);
+      const data = await res.json();
+      setWishlist(data);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const addToCart = (item) => {
-    console.log("Adding to cart:", item);
-    alert(`Added ${item.title} to cart!`);
+  const removeFromWishlist = async (id) => {
+    setIsRemoving(id);
+    try {
+      await fetch(`/api/Wishlist/${id}`, {
+        method: "DELETE",
+      });
+      fetchWishlist();
+    } catch (error) {
+      console.error("Error removing from wishlist:", error);
+    } finally {
+      setIsRemoving(null);
+    }
+  };
+
+  const addToCart = async (item) => {
+    setIsAddingToCart(item.id);
+    const cartItem = {
+      Id: crypto.randomUUID(),
+      UserId: userId,
+      ProductId: item.product.id,
+      Product: item.product,
+      Quantity: 1,
+      AddedAt: new Date().toISOString(),
+    };
+    try {
+      const res = await fetch("/api/Cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cartItem),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert("Failed to add to cart: " + (errorData.message || "Unknown error"));
+        setIsAddingToCart(null);
+        return;
+      }
+      alert(`Added ${item.product.name} to cart!`);
+      // Remove from wishlist after adding to cart
+      await fetch(`/api/Wishlist/${item.id}`, { method: "DELETE" });
+      fetchWishlist();
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Failed to add to cart!");
+    } finally {
+      setIsAddingToCart(null);
+    }
   };
 
   return (
@@ -56,7 +87,12 @@ const WishlistPage = () => {
           </span>
         </div>
 
-        {wishlist.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center min-h-[40vh]">
+            <Loader2 className="h-12 w-12 animate-spin text-pink-500" />
+            <p className="mt-4 text-lg font-medium text-gray-600">Loading your wishlist...</p>
+          </div>
+        ) : wishlist.length === 0 ? (
           <div className="text-center py-16">
             <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-medium text-gray-700 mb-2">
@@ -81,20 +117,25 @@ const WishlistPage = () => {
                     onClick={() => removeFromWishlist(item.id)}
                     className="p-2 bg-white rounded-full shadow-md hover:bg-red-50 hover:text-red-500 transition-colors"
                     aria-label="Remove from wishlist"
+                    disabled={isRemoving === item.id}
                   >
-                    <Trash2 className="h-5 w-5" />
+                    {isRemoving === item.id ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
 
                 <div className="relative overflow-hidden">
                   <img
-                    src={item.image}
-                    alt={item.title}
+                    src={item.product?.mainImage || item.product?.imageUrls?.[0] || "/fallback.png"}
+                    alt={item.product?.name}
                     className="w-full h-60 object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  {item.discount && (
+                  {item.product?.discount && (
                     <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                      {item.discount}
+                      {item.product.discount}
                     </span>
                   )}
                 </div>
@@ -102,10 +143,10 @@ const WishlistPage = () => {
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-1">
                     <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                      {item.title}
+                      {item.product?.name}
                     </h2>
                     <div className="flex items-center text-sm text-yellow-500">
-                      <span className="mr-1">{item.rating}</span>
+                      <span className="mr-1">{item.product?.rating || 0}</span>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-4 w-4 fill-current"
@@ -118,11 +159,11 @@ const WishlistPage = () => {
 
                   <div className="flex items-center mb-3">
                     <span className="text-lg font-bold text-gray-900">
-                      {item.price}
+                      ₹{item.product?.price}
                     </span>
-                    {item.originalPrice && (
+                    {item.product?.originalPrice && (
                       <span className="ml-2 text-sm text-gray-500 line-through">
-                        {item.originalPrice}
+                        ₹{item.product.originalPrice}
                       </span>
                     )}
                   </div>
@@ -131,9 +172,14 @@ const WishlistPage = () => {
                     <button
                       onClick={() => addToCart(item)}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center transition-colors"
+                      disabled={isAddingToCart === item.id}
                     >
-                      <ShoppingCart className="h-5 w-5 mr-2" />
-                      Add to Cart
+                      {isAddingToCart === item.id ? (
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      ) : (
+                        <ShoppingCart className="h-5 w-5 mr-2" />
+                      )}
+                      {isAddingToCart === item.id ? 'Adding...' : 'Add to Cart'}
                     </button>
                   </div>
                 </div>
