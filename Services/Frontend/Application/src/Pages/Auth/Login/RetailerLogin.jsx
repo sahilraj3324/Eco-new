@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import logo from '../../../assets/logo.png';
 
 const RetailerLogin = () => {
@@ -122,9 +122,9 @@ const RetailerLogin = () => {
         {/* Signup or Support Link */}
         <p className="text-center text-sm text-gray-500">
           Don’t have an account?{" "}
-          <span className="text-cyan-600 font-semibold cursor-pointer hover:underline">
-            Contact support
-          </span>
+          <Link to="/signup" className="text-cyan-600 font-semibold cursor-pointer hover:underline">
+            Sign up
+          </Link>
         </p>
       </div>
     </div>
