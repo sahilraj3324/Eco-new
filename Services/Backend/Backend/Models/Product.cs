@@ -82,6 +82,8 @@ namespace Backend.Models
         public string SleeveLength { get; set; }
         public string ShipsIn { get; set; }
         public string MainImage { get; set; }
+        public string Top { get; set; }
+        public string Trending { get; set; }
     }
 
     public class ProductVariant
