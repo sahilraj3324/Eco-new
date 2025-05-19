@@ -47,10 +47,11 @@ namespace Backend.Controllers
                 PhoneNumber = request.PhoneNumber,
                 Address = request.Address,
                 GstNumber = request.Gstnumber,
-                UserType = "Seller",
+                UserType = "Vendor",
                 pincode = request.pincode,
                 hnscode = request.hnscode,
-                profile_picture = request.profile_picture
+                profile_picture = request.profile_picture,
+                Status = "InReview", // 👈 Default status
             };
 
             // 💾 Save to database
@@ -155,6 +156,25 @@ namespace Backend.Controllers
             await _context.SaveChangesAsync();
             return Ok(seller);
         }
+
+        [HttpPut("update-status/{id}")]
+        public async Task<IActionResult> UpdateSellerStatus(Guid id, [FromBody] UpdateStatusRequest request)
+        {
+            var seller = await _context.Sellers.FindAsync(id);
+            if (seller == null)
+                return NotFound(new { message = "Seller not found." });
+
+            var validStatuses = new[] { "InReview", "Approved", "Not Approved" };
+
+            if (!validStatuses.Contains(request.Status))
+                return BadRequest(new { message = $"Invalid status. Must be one of: {string.Join(", ", validStatuses)}" });
+
+            seller.Status = request.Status;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Seller status updated to '{request.Status}'." });
+        }
+
 
         // Delete seller
         [HttpDelete("delete/{id}")]
