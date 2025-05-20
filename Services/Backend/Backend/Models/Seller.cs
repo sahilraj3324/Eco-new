@@ -31,6 +31,7 @@ namespace Backend.Models
         public string hnscode { get; set; }
 
         public string profile_picture { get; set; }
+        public string Status { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

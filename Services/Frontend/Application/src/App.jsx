@@ -8,8 +8,11 @@ import BottomNavBar from './components/BottomNavBar';
 import MyOrders from './Pages/Orders/Orders';
 import Profile from './Pages/Profile';
 import Settings from './Pages/Settings';
+import RetailerLogin from './Pages/Auth/Login/RetailerLogin';
+
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import RetailerSignup from './Pages/Auth/SignUp/RetailerSignup';
 
 
 function App() {
@@ -25,7 +28,10 @@ function App() {
             <Route path="/orders" element={<MyOrders />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/login" element={<RetailerLogin />} />
+            <Route path="/signup" element={<RetailerSignup />} />
             <Route path="*" element={<h2>404 Not Found</h2>} />
+            <Route path="/login" element={<RetailerLogin />} />
           </Routes>
         </div>
         <BottomNavBar />
