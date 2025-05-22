@@ -87,12 +87,7 @@ namespace Backend.Controllers
         public IActionResult Login([FromBody] Models.LoginRequest request)
         {
             // First, check if the user exists as a Buyer
-            var buyer = _context.Buyers.FirstOrDefault(u => u.Email == request.Email);
-            if (buyer != null && BCrypt.Net.BCrypt.Verify(request.Password, buyer.PasswordHash))
-            {
-                var token = GenerateJwtToken(buyer.Id.ToString());
-                return Ok(new { token, userId = buyer.Id, userType = "Buyer" });
-            }
+            
 
             // If not found as a Buyer, check if the user exists as a Seller
             var seller = _context.Sellers.FirstOrDefault(u => u.Email == request.Email);
@@ -105,21 +100,22 @@ namespace Backend.Controllers
                     seller = new
                     {
                         seller.Id,
-                        seller.storename,
-                        seller.Email,
-                        seller.PhoneNumber,
-                        seller.Address,
-                        seller.GstNumber,
                         seller.UserType,
-                        seller.pincode,
-                        seller.hnscode,
-                        seller.profile_picture
+                        seller.Status,
+
                     }
                 });
+            }
+            var buyer = _context.Buyers.FirstOrDefault(u => u.Email == request.Email);
+            if (buyer != null && BCrypt.Net.BCrypt.Verify(request.Password, buyer.PasswordHash))
+            {
+                var token = GenerateJwtToken(buyer.Id.ToString());
+                return Ok("You are regestered as Buyer Ask Admin to make changes");
             }
 
             return BadRequest(new { message = "Invalid credentials" });
         }
+
 
 
         // Get all sellers

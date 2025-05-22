@@ -53,9 +53,14 @@ namespace Backend.Models
             {
                 try
                 {
-                    return string.IsNullOrWhiteSpace(VariantsJson)
-                        ? new List<ProductVariant>()
-                        : JsonSerializer.Deserialize<List<ProductVariant>>(VariantsJson);
+                    if (string.IsNullOrWhiteSpace(VariantsJson))
+                        return new List<ProductVariant>();
+
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    return JsonSerializer.Deserialize<List<ProductVariant>>(VariantsJson, options);
                 }
                 catch
                 {
@@ -64,7 +69,11 @@ namespace Backend.Models
             }
             set
             {
-                VariantsJson = JsonSerializer.Serialize(value);
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                VariantsJson = JsonSerializer.Serialize(value, options);
             }
         }
 
@@ -88,8 +97,11 @@ namespace Backend.Models
 
     public class ProductVariant
     {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
         public string Size { get; set; }
         public string Color { get; set; }
         public string Weight { get; set; }
+        public string Stock { get; set; }
     }
 }

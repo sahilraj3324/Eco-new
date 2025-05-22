@@ -16,6 +16,7 @@ const Profile = () => {
     const email = localStorage.getItem('email');
     const phonenumber = localStorage.getItem('phonenumber');
     const profile_picture = localStorage.getItem('profile_picture');
+    const Status = localStorage.getItem('Status');
     setUserId(storedId);
 
     if (storedId) {
@@ -32,13 +33,14 @@ const Profile = () => {
           phone: phonenumber,
           password: '************',
           profileImage: 'https://via.placeholder.com/96',
+          Status: Status,
         });
       }, 500);
     }
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-10">
+    <div className=" flex items-center justify-center bg-gray-100 px-4 py-10">
       {userId ? (
         userData ? (
           <div className="w-full max-w-md space-y-6">
@@ -46,14 +48,14 @@ const Profile = () => {
             <div className="flex justify-start">
               <p className="text-sm font-medium text-gray-700">
                 Account Status:{' '}
-                <span className="text-green-600 font-semibold">Active</span>
+                <span className="text-green-600 font-semibold">{userData.Status}</span>
               </p>
             </div>
 
             {/* Profile Image */}
             <div className="relative flex justify-center">
               <img
-                src={store}
+                src={userData.profileImage}
                 alt="Store"
                 className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
               />
@@ -75,7 +77,7 @@ const Profile = () => {
             </div>
 
             {/* Update Button */}
-            <button className="w-full bg-cyan-600  text-white font-semibold py-3 rounded hover:bg-cyan-700 transition">
+            <button className="w-full bg-cyan-600  text-white font-semibold py-3 rounded-full hover:bg-cyan-700 transition">
               Update Details
             </button>
           </div>

@@ -9,6 +9,9 @@ const SingleProduct = () => {
   const [mainImageFile, setMainImageFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
   const [information, setInformation] = useState({
     name: "",
@@ -39,11 +42,60 @@ const SingleProduct = () => {
     if (storedId) {
       setSellerId(storedId);
     }
+    fetchCategories();
   }, []);
+
+  // Effect to fetch subcategories when category changes
+  useEffect(() => {
+    if (information.category) {
+      fetchSubcategories(information.category);
+    } else {
+      setSubcategories([]); // Clear subcategories when no category is selected
+    }
+  }, [information.category]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get("/api/Category/get-all");
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setMessage("Failed to load categories");
+    }
+  };
+
+  const fetchSubcategories = async (categoryId) => {
+    setLoadingSubcategories(true);
+    try {
+      const response = await axios.get(`/api/SubCategory/by-category/${categoryId}`);
+      if (response.data && response.data.length > 0) {
+        setSubcategories(response.data);
+        setMessage(""); // Clear any existing messages
+      } else {
+        setSubcategories([]);
+        setMessage(""); // Don't show error for empty subcategories
+      }
+    } catch (error) {
+      console.error("Error fetching subcategories:", error);
+      setSubcategories([]);
+      if (error.response?.status === 404) {
+        setMessage(""); // Don't show error for 404
+      } else {
+        setMessage("Failed to load subcategories. Please try again.");
+      }
+    } finally {
+      setLoadingSubcategories(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setInformation((prev) => ({ ...prev, [name]: value }));
+
+    // Reset subcategory when category changes
+    if (name === "category") {
+      setInformation(prev => ({ ...prev, subcategory: "" }));
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -232,27 +284,47 @@ const SingleProduct = () => {
 
             {/* Category & Subcategory */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <select
-                name="category"
-                value={information.category}
-                onChange={handleChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-              >
-                <option value="">Select Category</option>
-                <option>Clothing</option>
-                <option>Footwear</option>
-              </select>
+              <div>
+                <select
+                  name="category"
+                  value={information.category}
+                  onChange={handleChange}
+                  className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.categoryName}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <select
-                name="subcategory"
-                value={information.subcategory}
-                onChange={handleChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-              >
-                <option value="">Select Subcategory</option>
-                <option>T-Shirts</option>
-                <option>Sandals</option>
-              </select>
+              <div>
+                <select
+                  name="subcategory"
+                  value={information.subcategory}
+                  onChange={handleChange}
+                  className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+                  disabled={!information.category || loadingSubcategories}
+                >
+                  <option value="">Select Subcategory</option>
+                  {loadingSubcategories ? (
+                    <option disabled>Loading subcategories...</option>
+                  ) : subcategories.length === 0 ? (
+                    <option disabled>No subcategories available</option>
+                  ) : (
+                    subcategories.map((subcategory) => (
+                      <option key={subcategory.id} value={subcategory.id}>
+                        {subcategory.subCategoryName}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {message && message !== "" && (
+                  <p className="text-sm text-red-500 mt-1">{message}</p>
+                )}
+              </div>
             </div>
 
             {/* GST & HSN */}
@@ -276,7 +348,7 @@ const SingleProduct = () => {
               >
                 <option value="">Select HSN Code</option>
                 <option value="6109">6109 - T-shirts</option>
-                <option value="6204">6204 - Women’s Garments</option>
+                <option value="6204">6204 - Women's Garments</option>
                 <option value="6110">6110 - Sweaters</option>
                 <option value="6403">6403 - Footwear</option>
               </select>
