@@ -43,6 +43,15 @@ namespace Backend.Controllers
             return Ok(order);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllOrders()
+        {
+            var orders = await _context.Orders
+                .Include(o => o.Product)
+                .ToListAsync();
+
+            return Ok(orders);
+        }
 
 
         // GET: api/Order/buyer/{buyerId}

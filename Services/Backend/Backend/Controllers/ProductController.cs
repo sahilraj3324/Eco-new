@@ -127,6 +127,8 @@ namespace Backend.Controllers
             existingProduct.SleeveLength = updatedProduct.SleeveLength;
             existingProduct.ShipsIn = updatedProduct.ShipsIn;
             existingProduct.MainImage = updatedProduct.MainImage;
+            existingProduct.Top = updatedProduct.Top;
+            existingProduct.Trending = updatedProduct.Trending;
 
             // Update variants
             existingProduct.Variants = updatedProduct.Variants;
@@ -157,15 +159,88 @@ namespace Backend.Controllers
         [HttpDelete("delete-all")]
         public async Task<IActionResult> DeleteAllProducts()
         {
-            var allProducts = await _context.Products.ToListAsync();
+            try
+            {
+                // First, delete all related data
+                var cartItems = await _context.CartItems.ToListAsync();
+                var wishlistItems = await _context.WishlistItems.ToListAsync();
+                var orders = await _context.Orders.ToListAsync();
+                var reviewRatings = await _context.ReviewRatings.ToListAsync();
 
-            if (!allProducts.Any())
-                return NotFound(new { message = "No products found to delete." });
+                // Remove related data
+                _context.CartItems.RemoveRange(cartItems);
+                _context.WishlistItems.RemoveRange(wishlistItems);
+                _context.Orders.RemoveRange(orders);
+                _context.ReviewRatings.RemoveRange(reviewRatings);
 
-            _context.Products.RemoveRange(allProducts);
-            await _context.SaveChangesAsync();
+                // Get all products
+                var allProducts = await _context.Products.ToListAsync();
+                if (!allProducts.Any())
+                    return NotFound(new { message = "No products found to delete." });
 
-            return Ok(new { message = "All products deleted successfully!", deletedCount = allProducts.Count });
+                // Remove all products
+                _context.Products.RemoveRange(allProducts);
+                
+                // Save all changes
+                await _context.SaveChangesAsync();
+
+                return Ok(new { 
+                    message = "All products and related data deleted successfully!", 
+                    deletedCount = allProducts.Count,
+                    deletedRelatedItems = new {
+                        cartItems = cartItems.Count,
+                        wishlistItems = wishlistItems.Count,
+                        orders = orders.Count,
+                        reviews = reviewRatings.Count
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { 
+                    message = "Error occurred while deleting products.", 
+                    error = ex.Message 
+                });
+            }
         }
+
+        // Update variant stock by variant ID
+        [HttpPut("update-variant-stock/{productId}/{variantId}")]
+        public async Task<IActionResult> UpdateVariantStock(Guid productId, Guid variantId, [FromBody] UpdateVariantStockRequest request)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null)
+                return NotFound(new { message = "Product not found." });
+
+            var variants = product.Variants;
+            var variant = variants.FirstOrDefault(v => v.Id == variantId);
+
+            if (variant == null)
+                return NotFound(new { message = "Variant not found." });
+
+            // Update the stock
+            variant.Stock = request.NewStock.ToString();
+
+            // Update the variants list and save to JSON
+            product.Variants = variants;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new { 
+                    message = "Variant stock updated successfully.",
+                    variant = variant
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Failed to update variant stock.", error = ex.Message });
+            }
+        }
+    }
+
+    public class UpdateVariantStockRequest
+    {
+        public int NewStock { get; set; }
     }
 }

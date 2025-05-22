@@ -13,9 +13,8 @@ function App() {
     <>
     <Router>
       <Routes>
-     
         <Route path="/vendorSignup" element={< VendorSignUp/>} />
-        <Route path="/vendorlogin" element={< VendorLogin/>} />
+        <Route path="/" element={< VendorLogin/>} />
         <Route path="/vendordashboard" element={< VendorDashboard/>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
