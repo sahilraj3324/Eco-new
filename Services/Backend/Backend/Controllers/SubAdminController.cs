@@ -2,6 +2,10 @@
 using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Backend.Controllers
 {
@@ -10,10 +14,12 @@ namespace Backend.Controllers
     public class SubAdminController : ControllerBase
     {
         private readonly EcoContext _context;
+        private readonly IConfiguration _config;
 
-        public SubAdminController(EcoContext context)
+        public SubAdminController(EcoContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
         }
 
         [HttpGet]
@@ -61,6 +67,45 @@ namespace Backend.Controllers
             _context.SubAdmins.Remove(subAdmin);
             await _context.SaveChangesAsync();
             return Ok(new { message = "SubAdmin deleted." });
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var subAdmin = await _context.SubAdmins
+                .FirstOrDefaultAsync(s => s.Email == request.Email && s.Password == request.Password);
+
+            if (subAdmin == null)
+                return Unauthorized(new { message = "Invalid credentials" });
+
+            var token = GenerateJwtToken(subAdmin.Id.ToString());
+
+            return Ok(new
+            {
+                token,
+                subAdmin = new
+                {
+                    subAdmin.Id,
+                    subAdmin.Name,
+                    subAdmin.Email,
+                    subAdmin.Phone,
+                    subAdmin.Role
+                }
+            });
+        }
+
+        private string GenerateJwtToken(string userId)
+        {
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "ThisIsAReallyLongSecretKeyForJWTThatIsAtLeast32CharactersLong!");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[] { new Claim("id", userId) }),
+                Expires = DateTime.UtcNow.AddHours(1),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
     }
 }

@@ -4,7 +4,7 @@
 
 namespace Backend.Migrations
 {
-    public partial class abc : Migration
+    public partial class price : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

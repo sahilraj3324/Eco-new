@@ -19,6 +19,7 @@ namespace Backend.Data
         public DbSet<Admin> Admins { get; set; }
         public DbSet<SubAdmin> SubAdmins { get; set; }
         public DbSet<ReviewRating> ReviewRatings { get; set; }
+        public DbSet<ImageStore> ImageStores { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,6 +29,11 @@ namespace Backend.Data
                     v => string.Join(";", v),
                     v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
                 );
+
+            // Configure ImageStore entity
+            modelBuilder.Entity<ImageStore>()
+                .Property(i => i.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
         }
 
 

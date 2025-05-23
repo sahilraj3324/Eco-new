@@ -169,8 +169,64 @@ namespace Backend.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Seller status updated to '{request.Status}'." });
+            
         }
 
+        // Update all seller fields
+        [HttpPut("update-all-fields/{id}")]
+        public async Task<IActionResult> UpdateSellerAllFields(Guid id, [FromBody] UpdateSellerAllFieldsRequest request)
+        {
+            var seller = await _context.Sellers.FindAsync(id);
+            if (seller == null)
+                return NotFound(new { message = "Seller not found" });
+
+            // Update string fields
+            seller.storename = request.storename ?? seller.storename;
+            seller.Email = request.Email ?? seller.Email;
+            seller.Address = request.Address ?? seller.Address;
+            seller.GstNumber = request.GstNumber ?? seller.GstNumber;
+            seller.hnscode = request.hnscode ?? seller.hnscode;
+            seller.profile_picture = request.profile_picture ?? seller.profile_picture;
+
+            // Update numeric fields
+            if (request.PhoneNumber.HasValue)
+                seller.PhoneNumber = request.PhoneNumber.Value;
+            if (request.pincode.HasValue)
+                seller.pincode = request.pincode.Value;
+
+            // Update password if provided
+            if (!string.IsNullOrEmpty(request.Password))
+            {
+                seller.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new
+                {
+                    message = "Seller updated successfully",
+                    seller = new
+                    {
+                        seller.Id,
+                        seller.storename,
+                        seller.Email,
+                        seller.PhoneNumber,
+                        seller.Address,
+                        seller.GstNumber,
+                        seller.UserType,
+                        seller.pincode,
+                        seller.hnscode,
+                        seller.profile_picture,
+                        seller.Status
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Error updating seller", error = ex.Message });
+            }
+        }
 
         // Delete seller
         [HttpDelete("delete/{id}")]
