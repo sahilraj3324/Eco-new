@@ -237,10 +237,49 @@ namespace Backend.Controllers
                 return BadRequest(new { message = "Failed to update variant stock.", error = ex.Message });
             }
         }
+
+        // Update variant price by variant ID
+        [HttpPut("update-variant-price/{productId}/{variantId}")]
+        public async Task<IActionResult> UpdateVariantPrice(Guid productId, Guid variantId, [FromBody] UpdateVariantPriceRequest request)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null)
+                return NotFound(new { message = "Product not found." });
+
+            var variants = product.Variants;
+            var variant = variants.FirstOrDefault(v => v.Id == variantId);
+
+            if (variant == null)
+                return NotFound(new { message = "Variant not found." });
+
+            // Update the price
+            variant.Price = request.NewPrice;
+
+            // Update the variants list and save to JSON
+            product.Variants = variants;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new { 
+                    message = "Variant price updated successfully.",
+                    variant = variant
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Failed to update variant price.", error = ex.Message });
+            }
+        }
     }
 
     public class UpdateVariantStockRequest
     {
         public int NewStock { get; set; }
+    }
+
+    public class UpdateVariantPriceRequest
+    {
+        public decimal NewPrice { get; set; }
     }
 }

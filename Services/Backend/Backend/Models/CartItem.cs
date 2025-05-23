@@ -19,6 +19,12 @@ namespace Backend.Models
         public Product Product { get; set; }
 
         [Required]
+        public string Color { get; set; }
+
+        [Required]
+        public string Size { get; set; }
+
+        [Required]
         public int Quantity { get; set; } = 1;
 
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;

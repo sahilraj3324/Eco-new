@@ -103,5 +103,6 @@ namespace Backend.Models
         public string Color { get; set; }
         public string Weight { get; set; }
         public string Stock { get; set; }
+        public decimal Price { get; set; }
     }
 }
