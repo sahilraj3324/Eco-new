@@ -31,13 +31,14 @@ const BulkUpload = () => {
           // Parse variants string into array of objects
           const variantStrings = item.variants?.split("|") || [];
           const variants = variantStrings.map((v) => {
-            const [size, color, weight, stock] = v.split(",");
+            const [size, color, weight, stock, price] = v.split(",");
             return {
               id: uuidv4(),
               size: size?.trim() || "",
               color: color?.trim() || "",
               weight: weight?.trim() || "",
-              stock: stock?.trim() || ""
+              stock: stock?.trim() || "",
+              price: Number(price) || 0
             };
           });
 
