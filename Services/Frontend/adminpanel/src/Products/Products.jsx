@@ -175,18 +175,12 @@ export default function Products() {
               </div>
               
               <div className="mt-4 flex justify-end space-x-3 border-t border-gray-200 pt-3">
-                <Link 
-                  to={`/products/${product.id}`}
-                  className="rounded px-3 py-1 text-sm text-cyan-600 hover:bg-cyan-50 hover:text-cyan-900"
+                <Link
+                  to={`/products/view/${product.id}`}
+                  className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 hover:text-blue-900"
                 >
-                  Edit
+                  View
                 </Link>
-                <button
-                  onClick={() => handleDeleteProduct(product.id)}
-                  className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 hover:text-red-900"
-                >
-                  Delete
-                </button>
               </div>
             </div>
           </div>
@@ -301,18 +295,12 @@ export default function Products() {
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm space-x-2">
-                      <Link 
-                        to={`/products/${product.id}`}
-                        className="text-cyan-600 hover:text-cyan-900"
+                      <Link
+                        to={`/products/view/${product.id}`}
+                        className="text-blue-600 hover:text-blue-900 mr-2"
                       >
-                        Edit
+                        View
                       </Link>
-                      <button
-                        onClick={() => handleDeleteProduct(product.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
                     </td>
                   </tr>
                 ))

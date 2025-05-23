@@ -23,12 +23,26 @@ namespace Backend.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Configure ReviewRating Images property with proper value comparer
             modelBuilder.Entity<ReviewRating>()
                 .Property(r => r.Images)
                 .HasConversion(
                     v => string.Join(";", v),
                     v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
-                );
+                )
+                .Metadata.SetValueComparer(new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
+                    (c1, c2) => c1!.SequenceEqual(c2!),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()));
+
+            // Configure decimal properties with proper precision and scale
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Price)
+                .HasColumnType("decimal(18,2)");
+
+            modelBuilder.Entity<Order>()
+                .Property(o => o.UnitPrice)
+                .HasColumnType("decimal(18,2)");
 
             // Configure ImageStore entity
             modelBuilder.Entity<ImageStore>()
@@ -36,9 +50,6 @@ namespace Backend.Data
                 .HasDefaultValueSql("GETUTCDATE()");
         }
 
-
         //public DbSet<Cart> Carts { get; set; }
-
-
     }
 }
