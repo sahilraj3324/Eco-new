@@ -256,14 +256,18 @@ const SingleProduct = () => {
         return sum + (parseInt(variant.stock) || 0);
       }, 0);
 
+      // Find category and subcategory names from IDs
+      const selectedCategory = categories.find(cat => cat.id === information.category);
+      const selectedSubcategory = subcategories.find(subcat => subcat.id === information.subcategory);
+
       const product = {
         name: information.name,
         description: information.description,
         price: parseFloat(information.price),
         stock: totalStock,
         sellerId: sellerId,
-        category: information.category,
-        subcategory: information.subcategory,
+        category: selectedCategory ? selectedCategory.categoryName : information.category,
+        subcategory: selectedSubcategory ? selectedSubcategory.subCategoryName : information.subcategory,
         gst: information.gst,
         hsn1: information.hsn1,
         moq: information.moq,
