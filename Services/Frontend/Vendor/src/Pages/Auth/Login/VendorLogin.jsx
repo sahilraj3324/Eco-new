@@ -35,27 +35,25 @@ const VendorLogin = () => {
           },
         }
       );
+      
 
-      setMessage("User logged in successfully!");
+      
 
       // Save data to localStorage
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("Id", response.data.seller.id);
-      localStorage.setItem("storename", response.data.seller.storename);
-      localStorage.setItem("email", response.data.seller.email);
-      localStorage.setItem("hnscode", response.data.seller.hnscode);
-      localStorage.setItem("phonenumber", response.data.seller.phoneNumber);
-      localStorage.setItem("pincode", response.data.seller.pincode);
-      localStorage.setItem("address", response.data.seller.address);
-      localStorage.setItem("gstnumber", response.data.seller.gstNumber);
-      localStorage.setItem("profile_picture", response.data.seller.profile_picture);
       localStorage.setItem("userType", response.data.seller.userType);
+      localStorage.setItem("Status", response.data.seller.status);
 
       // Clear inputs
       setInformation({ email: "", password: "" });
 
-      // Navigate to vendor dashboard
-      navigate("/vendordashboard");
+      // Check status before navigation
+      if (response.data.seller.status === "Approved") {
+        navigate("/vendordashboard");
+      } else {
+        setError("Your account is pending approval. Please wait for admin approval.");
+      }
 
     } catch (error) {
       console.error("Login error:", error.response?.data || error.message);
@@ -112,7 +110,7 @@ const VendorLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-cyan-600 text-white font-bold py-3 rounded hover:bg-cyan-700 transition disabled:opacity-50"
+            className="w-full bg-cyan-600 text-white font-bold py-3 rounded-full hover:bg-cyan-700 transition disabled:opacity-50"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
@@ -120,7 +118,7 @@ const VendorLogin = () => {
 
         {/* Signup or Support Link */}
         <p className="text-center text-sm text-gray-500">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <span className="text-cyan-600 font-semibold cursor-pointer hover:underline">
             Contact support
           </span>

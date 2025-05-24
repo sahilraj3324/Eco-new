@@ -5,8 +5,10 @@ const navItems = [
   { name: 'Dashboard', path: '/dashboard' },
   { name: 'Vendors', path: '/vendors' },
   { name: 'Products', path: '/products' },
+  { name: 'Categories', path: '/categories' },
   { name: 'Retailers', path: '/retailers' },
   { name: 'Asks', path: '/asks' },
+  { name: 'Admins', path: '/admins' },
 ]
 
 export default function Layout() {
