@@ -17,8 +17,7 @@ const directAxios = axios.create({
   baseURL: DIRECT_URL,
   timeout: 5000,
   headers: {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
+    'Content-Type': 'application/json'
   }
 });
 
@@ -280,7 +279,7 @@ export const sellerApi = {
   // Get all sellers
   getAll: async () => {
     try {
-      const response = await axios.get(`${PROXY_URL}/Seller/get-all`, authConfig());
+      const response = await proxyAxios.get('/Seller/get-all', authConfig());
       return response.data;
     } catch (error) {
       console.error('Error fetching all sellers:', error);
@@ -325,6 +324,22 @@ export const sellerApi = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('seller');
+  },
+
+  // Update seller status
+  updateStatus: async (id, status) => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'put',
+        url: `/Seller/update-status/${id}`,
+        data: { Status: status },
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating seller status:`, error);
+      throw error;
+    }
   }
 };
 
@@ -376,6 +391,63 @@ export const buyerApi = {
   }
 };
 
+// Category API calls
+export const categoryApi = {
+  create: async (categoryData) => {
+    try {
+      const response = await axios.post(`${PROXY_URL}/Category/create`, categoryData, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error creating category:', error);
+      throw error;
+    }
+  },
+  getAll: async () => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/Category/get-all`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all categories:', error);
+      throw error;
+    }
+  },
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/Category/get/${id}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching category ${id}:`, error);
+      throw error;
+    }
+  }
+};
+
+// SubCategory API calls
+export const subCategoryApi = {
+  create: async (subCategoryData) => {
+    try {
+      const payload = {
+        SubCategoryName: subCategoryData.subCategoryName,
+        CategoryId: subCategoryData.categoryId
+      };
+      const response = await axios.post(`${PROXY_URL}/SubCategory`, payload, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error creating subcategory:', error);
+      throw error;
+    }
+  },
+  getByCategoryId: async (categoryId) => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/SubCategory/by-category/${categoryId}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching subcategories for category ${categoryId}:`, error);
+      throw error;
+    }
+  }
+};
+
 // Diagnostic Functions
 export const diagnosticApi = {
   checkConnection: async () => {
@@ -388,7 +460,7 @@ export const diagnosticApi = {
     
     // Test proxy
     try {
-      const proxyResponse = await axios.get(`${PROXY_URL}/Seller/get-all`);
+      const proxyResponse = await proxyAxios.get('/Seller/get-all', authConfig());
       results.proxy.status = proxyResponse.status;
       results.proxy.data = proxyResponse.data;
     } catch (error) {
@@ -469,13 +541,203 @@ export const diagnosticApi = {
   }
 };
 
+// AskAdmin API calls
+export const askAdminApi = {
+  // Get all questions
+  getAll: async () => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/AskAdmin`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all questions:', error);
+      throw error;
+    }
+  },
+
+  // Get questions by userId
+  getByUser: async (userId) => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/AskAdmin/user/${userId}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching questions for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  // Get question by id
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/AskAdmin/${id}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching question ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a new question
+  create: async (questionData) => {
+    try {
+      const response = await axios.post(`${PROXY_URL}/AskAdmin`, questionData, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error creating question:', error);
+      throw error;
+    }
+  },
+
+  // Update a question (answer)
+  update: async (id, updateData) => {
+    try {
+      const response = await axios.put(`${PROXY_URL}/AskAdmin/${id}`, updateData, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating question ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a question
+  delete: async (id) => {
+    try {
+      const response = await axios.delete(`${PROXY_URL}/AskAdmin/${id}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting question ${id}:`, error);
+      throw error;
+    }
+  }
+};
+
+// Admin API calls
+export const adminApi = {
+  // Get all admins
+  getAll: async () => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/Admin`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all admins:', error);
+      throw error;
+    }
+  },
+
+  // Get admin by id
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/Admin/${id}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching admin ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a new admin
+  create: async (adminData) => {
+    try {
+      const response = await axios.post(`${PROXY_URL}/Admin`, adminData, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error creating admin:', error);
+      throw error;
+    }
+  },
+
+  // Update an admin
+  update: async (id, adminData) => {
+    try {
+      const response = await axios.put(`${PROXY_URL}/Admin/${id}`, adminData, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating admin ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete an admin
+  delete: async (id) => {
+    try {
+      const response = await axios.delete(`${PROXY_URL}/Admin/${id}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting admin ${id}:`, error);
+      throw error;
+    }
+  }
+};
+
+// SubAdmin API calls
+export const subAdminApi = {
+  // Get all subadmins
+  getAll: async () => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/SubAdmin`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all subadmins:', error);
+      throw error;
+    }
+  },
+
+  // Get subadmin by id
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`${PROXY_URL}/SubAdmin/${id}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching subadmin ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a new subadmin
+  create: async (subAdminData) => {
+    try {
+      const response = await axios.post(`${PROXY_URL}/SubAdmin`, subAdminData, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error('Error creating subadmin:', error);
+      throw error;
+    }
+  },
+
+  // Update a subadmin
+  update: async (id, subAdminData) => {
+    try {
+      const response = await axios.put(`${PROXY_URL}/SubAdmin/${id}`, subAdminData, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating subadmin ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a subadmin
+  delete: async (id) => {
+    try {
+      const response = await axios.delete(`${PROXY_URL}/SubAdmin/${id}`, authConfig());
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting subadmin ${id}:`, error);
+      throw error;
+    }
+  }
+};
+
 // Export a combined API object
 const api = {
   product: productApi,
   order: orderApi,
   seller: sellerApi,
   buyer: buyerApi,
-  diagnostic: diagnosticApi
+  diagnostic: diagnosticApi,
+  category: categoryApi,
+  subCategory: subCategoryApi,
+  askAdmin: askAdminApi,
+  admin: adminApi,
+  subAdmin: subAdminApi
 };
 
 export default api; 

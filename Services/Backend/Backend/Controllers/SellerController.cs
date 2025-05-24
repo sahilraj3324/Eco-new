@@ -47,10 +47,11 @@ namespace Backend.Controllers
                 PhoneNumber = request.PhoneNumber,
                 Address = request.Address,
                 GstNumber = request.Gstnumber,
-                UserType = "Seller",
+                UserType = "Vendor",
                 pincode = request.pincode,
                 hnscode = request.hnscode,
-                profile_picture = request.profile_picture
+                profile_picture = request.profile_picture,
+                Status = "InReview", // 👈 Default status
             };
 
             // 💾 Save to database
@@ -86,12 +87,7 @@ namespace Backend.Controllers
         public IActionResult Login([FromBody] Models.LoginRequest request)
         {
             // First, check if the user exists as a Buyer
-            var buyer = _context.Buyers.FirstOrDefault(u => u.Email == request.Email);
-            if (buyer != null && BCrypt.Net.BCrypt.Verify(request.Password, buyer.PasswordHash))
-            {
-                var token = GenerateJwtToken(buyer.Id.ToString());
-                return Ok(new { token, userId = buyer.Id, userType = "Buyer" });
-            }
+            
 
             // If not found as a Buyer, check if the user exists as a Seller
             var seller = _context.Sellers.FirstOrDefault(u => u.Email == request.Email);
@@ -104,21 +100,22 @@ namespace Backend.Controllers
                     seller = new
                     {
                         seller.Id,
-                        seller.storename,
-                        seller.Email,
-                        seller.PhoneNumber,
-                        seller.Address,
-                        seller.GstNumber,
                         seller.UserType,
-                        seller.pincode,
-                        seller.hnscode,
-                        seller.profile_picture
+                        seller.Status,
+
                     }
                 });
+            }
+            var buyer = _context.Buyers.FirstOrDefault(u => u.Email == request.Email);
+            if (buyer != null && BCrypt.Net.BCrypt.Verify(request.Password, buyer.PasswordHash))
+            {
+                var token = GenerateJwtToken(buyer.Id.ToString());
+                return Ok("You are regestered as Buyer Ask Admin to make changes");
             }
 
             return BadRequest(new { message = "Invalid credentials" });
         }
+
 
 
         // Get all sellers
@@ -154,6 +151,81 @@ namespace Backend.Controllers
 
             await _context.SaveChangesAsync();
             return Ok(seller);
+        }
+
+        [HttpPut("update-status/{id}")]
+        public async Task<IActionResult> UpdateSellerStatus(Guid id, [FromBody] UpdateStatusRequest request)
+        {
+            var seller = await _context.Sellers.FindAsync(id);
+            if (seller == null)
+                return NotFound(new { message = "Seller not found." });
+
+            var validStatuses = new[] { "InReview", "Approved", "Not Approved" };
+
+            if (!validStatuses.Contains(request.Status))
+                return BadRequest(new { message = $"Invalid status. Must be one of: {string.Join(", ", validStatuses)}" });
+
+            seller.Status = request.Status;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Seller status updated to '{request.Status}'." });
+            
+        }
+
+        // Update all seller fields
+        [HttpPut("update-all-fields/{id}")]
+        public async Task<IActionResult> UpdateSellerAllFields(Guid id, [FromBody] UpdateSellerAllFieldsRequest request)
+        {
+            var seller = await _context.Sellers.FindAsync(id);
+            if (seller == null)
+                return NotFound(new { message = "Seller not found" });
+
+            // Update string fields
+            seller.storename = request.storename ?? seller.storename;
+            seller.Email = request.Email ?? seller.Email;
+            seller.Address = request.Address ?? seller.Address;
+            seller.GstNumber = request.GstNumber ?? seller.GstNumber;
+            seller.hnscode = request.hnscode ?? seller.hnscode;
+            seller.profile_picture = request.profile_picture ?? seller.profile_picture;
+
+            // Update numeric fields
+            if (request.PhoneNumber.HasValue)
+                seller.PhoneNumber = request.PhoneNumber.Value;
+            if (request.pincode.HasValue)
+                seller.pincode = request.pincode.Value;
+
+            // Update password if provided
+            if (!string.IsNullOrEmpty(request.Password))
+            {
+                seller.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new
+                {
+                    message = "Seller updated successfully",
+                    seller = new
+                    {
+                        seller.Id,
+                        seller.storename,
+                        seller.Email,
+                        seller.PhoneNumber,
+                        seller.Address,
+                        seller.GstNumber,
+                        seller.UserType,
+                        seller.pincode,
+                        seller.hnscode,
+                        seller.profile_picture,
+                        seller.Status
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Error updating seller", error = ex.Message });
+            }
         }
 
         // Delete seller

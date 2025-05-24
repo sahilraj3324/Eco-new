@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Vendorhome from '../Home/VendorHome';
 import ProductPost from '../ProductPost/ProductPost';
 import Profile from '../Profile/Profile';
@@ -27,11 +28,19 @@ const VendorDashboard = () => {
   const [activeSection, setActiveSection] = useState('Home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [name, setName] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(()=>{
+  useEffect(() => {
+    // Check authentication and status
+       const status = localStorage.getItem('Status');
+    if (status !== 'Approved') {
+      navigate('/vendorlogin');
+      return;
+    }
+
     const storename = localStorage.getItem('storename');
-    setName(storename)
-  })
+    setName(storename);
+  }, [navigate]);
 
   const sections = [
     { name: 'Home', icon: <Home size={18} />, component: <SellerHome /> },
