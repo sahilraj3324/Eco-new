@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../../Firebase/firebase";
+import { v4 as uuidv4 } from "uuid";
 
 const SingleProduct = () => {
   const [sellerId, setSellerId] = useState("");
@@ -32,10 +33,31 @@ const SingleProduct = () => {
     sleeveLength: "",
     shipsIn: "",
     brand: "",
-    sizes: [],
-    colors: [],
-    weights: {},
+    variants: [],
+    top: "false",
+    trending: "false"
   });
+
+  const [newColor, setNewColor] = useState("");
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const colorPalette = [
+    { name: "Red", value: "#FF0000" },
+    { name: "Blue", value: "#0000FF" },
+    { name: "Green", value: "#008000" },
+    { name: "Black", value: "#000000" },
+    { name: "White", value: "#FFFFFF" },
+    { name: "Yellow", value: "#FFFF00" },
+    { name: "Purple", value: "#800080" },
+    { name: "Pink", value: "#FFC0CB" },
+    { name: "Grey", value: "#808080" },
+    { name: "Brown", value: "#A52A2A" },
+    { name: "Orange", value: "#FFA500" },
+    { name: "Navy", value: "#000080" },
+    { name: "Teal", value: "#008080" },
+    { name: "Maroon", value: "#800000" },
+    { name: "Olive", value: "#808000" }
+  ];
 
   useEffect(() => {
     const storedId = localStorage.getItem("Id");
@@ -124,95 +146,128 @@ const SingleProduct = () => {
     });
   };
 
-  const handleCheckboxChange = (e) => {
-    const { name, value, checked } = e.target;
-    setInformation((prev) => {
-      const updatedArray = checked
-        ? [...prev[name], value]
-        : prev[name].filter((item) => item !== value);
-      return { ...prev, [name]: updatedArray };
-    });
+  const handleAddColor = (colorName, colorValue) => {
+    if (colorName && !information.variants.some(v => v.color === colorName)) {
+      setInformation(prev => ({
+        ...prev,
+        variants: [...prev.variants, {
+          color: colorName,
+          colorValue: colorValue,
+          sizes: []
+        }]
+      }));
+      setNewColor("");
+      setShowColorPicker(false);
+    }
   };
 
-  const handleSizeChange = (e) => {
-    const { value, checked } = e.target;
-    setInformation((prev) => {
-      let updatedSizes = checked
-        ? [...prev.sizes, value]
-        : prev.sizes.filter((s) => s !== value);
-
-      let updatedWeights = { ...prev.weights };
+  const handleSizeChange = (colorIndex, size, checked) => {
+    setInformation(prev => {
+      const updatedVariants = [...prev.variants];
+      const variant = updatedVariants[colorIndex];
       if (checked) {
-        updatedWeights[value] = "";
+        // Only add if not already present
+        if (!variant.sizes.some(s => s.size === size)) {
+          variant.sizes = [...variant.sizes, {
+            size,
+            weight: "",
+            stock: "",
+            price: ""
+          }];
+        }
       } else {
-        delete updatedWeights[value];
+        // Remove size from the color variant
+        variant.sizes = variant.sizes.filter(s => s.size !== size);
       }
-
       return {
         ...prev,
-        sizes: updatedSizes,
-        weights: updatedWeights,
+        variants: updatedVariants
       };
     });
   };
 
-  const handleWeightChange = (size, value) => {
-    setInformation((prev) => ({
-      ...prev,
-      weights: {
-        ...prev.weights,
-        [size]: value,
-      },
-    }));
+  const handleVariantChange = (colorIndex, sizeIndex, field, value) => {
+    setInformation(prev => {
+      const updatedVariants = [...prev.variants];
+      const variant = updatedVariants[colorIndex];
+      variant.sizes[sizeIndex] = {
+        ...variant.sizes[sizeIndex],
+        [field]: value
+      };
+      return {
+        ...prev,
+        variants: updatedVariants
+      };
+    });
   };
 
+  const handleRemoveColor = (colorIndex) => {
+    setInformation(prev => ({
+      ...prev,
+      variants: prev.variants.filter((_, index) => index !== colorIndex)
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
     
-    if (
-      !information.name ||
-      !information.price ||
-      !information.stock ||
-      !sellerId
-    ) {
+    if (!information.name || !information.price || !sellerId) {
       setMessage("❌ Please fill all required fields.");
       setLoading(false);
       return;
     }
-  
+
+    // Validate variants
+    const invalidVariants = information.variants.some(
+      v => !v.color || v.sizes.length === 0 || v.sizes.some(s => !s.stock || !s.price)
+    );
+    if (invalidVariants) {
+      setMessage("❌ Please fill all variant details (color, sizes, and stock).");
+      setLoading(false);
+      return;
+    }
+
     try {
       // Upload images
       const imageUrls = await Promise.all(
         uploadedImages.map((file) => uploadToFirebase(file, "products"))
       );
-  
+
       const mainImageUrl = mainImageFile
         ? await uploadToFirebase(mainImageFile, "products")
         : "";
-  
-      // 🔁 Prepare Variants
-      const variants = [];
-      for (const size of information.sizes) {
-        for (const color of information.colors) {
-          variants.push({
-            Size: size,  // Ensure Size is a string
-            Color: color, // Ensure Color is a string
-            Weight: information.weights[size] || "", // Ensure Weight is a string
-          });
-        }
-      }
-  
+
+      // Flatten variants for API
+      const flattenedVariants = information.variants.flatMap(variant => 
+        variant.sizes.map(size => ({
+          id: uuidv4(),
+          color: variant.color,
+          size: size.size,
+          weight: size.weight || "",
+          stock: size.stock,
+          price: Number(size.price) || 0
+        }))
+      );
+
+      // Calculate total stock
+      const totalStock = flattenedVariants.reduce((sum, variant) => {
+        return sum + (parseInt(variant.stock) || 0);
+      }, 0);
+
+      // Find category and subcategory names from IDs
+      const selectedCategory = categories.find(cat => cat.id === information.category);
+      const selectedSubcategory = subcategories.find(subcat => subcat.id === information.subcategory);
+
       const product = {
         name: information.name,
         description: information.description,
         price: parseFloat(information.price),
-        stock: parseInt(information.stock),
+        stock: totalStock,
         sellerId: sellerId,
-        category: information.category,
-        subcategory: information.subcategory,
+        category: selectedCategory ? selectedCategory.categoryName : information.category,
+        subcategory: selectedSubcategory ? selectedSubcategory.subCategoryName : information.subcategory,
         gst: information.gst,
         hsn1: information.hsn1,
         moq: information.moq,
@@ -228,15 +283,17 @@ const SingleProduct = () => {
         mainImage: mainImageUrl,
         imageUrls: imageUrls,
         imageUrlsJson: JSON.stringify(imageUrls),
-        variants: variants,  // Make sure variants is an array of objects
-        variantsJson: JSON.stringify(variants), // Correctly stringify variants
-        status: "In Review", // You can adjust or remove if backend overrides it
+        variants: flattenedVariants,
+        variantsJson: JSON.stringify(flattenedVariants),
+        status: "In Review",
+        top: information.top,
+        trending: information.trending
       };
-  
+
       const response = await axios.post("/api/Product/add", product, {
         headers: { "Content-Type": "application/json" },
       });
-  
+
       setMessage("✅ Product added successfully!");
       setInformation({
         name: "",
@@ -257,9 +314,9 @@ const SingleProduct = () => {
         sleeveLength: "",
         shipsIn: "",
         brand: "",
-        sizes: [],
-        colors: [],
-        weights: {},
+        variants: [],
+        top: "false",
+        trending: "false"
       });
       setUploadedImages([]);
       setMainImageFile(null);
@@ -355,66 +412,159 @@ const SingleProduct = () => {
             </div>
 
             {/* Sizes & Colors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Select Size</h3>
-                <div className="flex gap-4">
-                <div>
-  <h3 className="font-bold mb-1">Select Sizes</h3>
-  <div className="flex gap-4">
-    {["S", "M", "L", "XL", "XXL"].map((size) => (
-      <label key={size} className="flex items-center">
-        <input
-          type="checkbox"
-          value={size}
-          checked={information.sizes.includes(size)}
-          onChange={handleSizeChange}
-          className="mr-2"
-        />
-        {size}
-      </label>
-    ))}
-  </div>
-
-  {information.sizes.length > 0 && (
-    <div className="mt-4">
-      <h4 className="font-semibold mb-2">Enter Weight for Selected Sizes</h4>
-      {information.sizes.map((size) => (
-        <div key={size} className="mb-2">
-          <label className="block mb-1">{size} Weight (kg):</label>
-          <input
-            type="text"
-            value={information.weights[size] || ""}
-            onChange={(e) => handleWeightChange(size, e.target.value)}
-            className="p-2 border rounded w-full"
-            placeholder={`Enter weight for size ${size}`}
-          />
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold mb-4">Product Variants</h3>
+              
+              {/* Add Color Input */}
+              <div className="mb-6">
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">Add Color</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newColor}
+                        onChange={(e) => setNewColor(e.target.value)}
+                        onFocus={() => setShowColorPicker(true)}
+                        className="p-2 border rounded w-full"
+                        placeholder="Select or enter color name"
+                      />
+                      {showColorPicker && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg p-4">
+                          <div className="grid grid-cols-3 gap-2">
+                            {colorPalette.map((color) => (
+                              <button
+                                key={color.name}
+                                type="button"
+                                onClick={() => handleAddColor(color.name, color.value)}
+                                className="flex items-center gap-2 p-2 rounded hover:bg-gray-100"
+                              >
+                                <div
+                                  className="w-6 h-6 rounded-full border"
+                                  style={{ backgroundColor: color.value }}
+                                />
+                                <span>{color.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="mt-4 pt-4 border-t">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newColor}
+                                onChange={(e) => setNewColor(e.target.value)}
+                                className="flex-1 p-2 border rounded"
+                                placeholder="Or enter custom color name"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddColor(newColor, "#000000")}
+                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                              >
+                                Add Custom
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Select Color</h3>
-                <div className="flex gap-4">
-                {["Red", "Blue", "Green", "Black"].map((c) => (
-  <label key={c} className="flex items-center">
-    <input
-      type="checkbox"
-      name="colors"
-      value={c}
-      checked={information.colors.includes(c)}
-      onChange={handleCheckboxChange}
-      className="mr-2"
-    />
-    {c}
-  </label>
-))}
+              {/* Color Variants */}
+              {information.variants.length > 0 && (
+                <div className="space-y-6">
+                  {information.variants.map((variant, colorIndex) => (
+                    <div key={colorIndex} className="border p-4 rounded-lg bg-gray-50">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-6 h-6 rounded-full border"
+                            style={{ backgroundColor: variant.colorValue || variant.color.toLowerCase() }}
+                          />
+                          <h4 className="text-lg font-semibold">{variant.color}</h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveColor(colorIndex)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* Size Selection */}
+                      <div className="mb-4">
+                        <h5 className="font-medium mb-2">Select Sizes</h5>
+                        <div className="flex gap-4">
+                          {["S", "M", "L", "XL", "XXL"].map((size) => (
+                            <label key={size} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={variant.sizes.some(s => s.size === size)}
+                                onChange={(e) => handleSizeChange(colorIndex, size, e.target.checked)}
+                                className="mr-2"
+                              />
+                              {size}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Size Details */}
+                      {variant.sizes.length > 0 && (
+                        <div className="space-y-4">
+                          <h5 className="font-medium">Size Details</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {variant.sizes.map((sizeVariant, sizeIndex) => (
+                              <div key={sizeIndex} className="bg-white rounded border p-3">
+                                <div className="mb-2">
+                                  <label className="block text-sm font-medium">Size {sizeVariant.size}</label>
+                                </div>
+                                <div className="space-y-2">
+                                  <div>
+                                    <label className="block text-sm text-gray-600">Weight (kg)</label>
+                                    <input
+                                      type="text"
+                                      value={sizeVariant.weight || ""}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'weight', e.target.value)}
+                                      className="p-2 border rounded w-full"
+                                      placeholder="Enter weight"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm text-gray-600">Stock</label>
+                                    <input
+                                      type="number"
+                                      value={sizeVariant.stock || ""}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'stock', e.target.value)}
+                                      className="p-2 border rounded w-full"
+                                      placeholder="Enter stock"
+                                      min="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm text-gray-600">Price</label>
+                                    <input
+                                      type="number"
+                                      value={sizeVariant.price || ""}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'price', e.target.value)}
+                                      className="p-2 border rounded w-full"
+                                      placeholder="Enter Price"
+                                      min="0"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Other Inputs */}
@@ -617,7 +767,7 @@ const SingleProduct = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-cyan-500 text-white p-3 rounded shadow-md hover:bg-blue-700 transition-all duration-300"
+                className="bg-cyan-500 text-white p-3 rounded-full shadow-md hover:bg-blue-700 transition-all duration-300"
               >
                 {loading ? "Submitting..." : "Add Product"}
               </button>

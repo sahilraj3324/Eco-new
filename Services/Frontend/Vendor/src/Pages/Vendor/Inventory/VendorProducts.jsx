@@ -45,9 +45,9 @@ const VendorProducts = () => {
       </div>
 
       {/* Orders Content */}
-      <div className="mt-4 p-6 bg-white border rounded-md">
-        <p className="text-center text-gray-500 text-lg font-semibold">Order Details</p>
-        <div className="mt-4 space-y-3">{tabs[activeTab]}</div>
+      <div className="mt-4 p- bg-white border rounded-md">
+        <p className="text-center p-2 text-gray-500 text-xl font-semibold">Order Details</p>
+        <div className="items-start">{tabs[activeTab]}</div>
       </div>
 
       {/* Info Box */}
