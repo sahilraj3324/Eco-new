@@ -16,6 +16,9 @@ const RetailerLogin = () => {
     
       const navigate = useNavigate();
     
+      const [selectedFile, setSelectedFile] = useState(null);
+      const [previewImage, setPreviewImage] = useState(null);
+    
       const handleChange = (e) => {
         setInformation({ ...information, [e.target.name]: e.target.value });
       };
@@ -121,7 +124,7 @@ const RetailerLogin = () => {
 
         {/* Signup or Support Link */}
         <p className="text-center text-sm text-gray-500">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link to="/signup" className="text-cyan-600 font-semibold cursor-pointer hover:underline">
             Sign up
           </Link>
