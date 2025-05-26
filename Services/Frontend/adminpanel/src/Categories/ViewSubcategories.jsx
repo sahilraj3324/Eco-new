@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { subCategoryApi, categoryApi } from '../api'; // Adjusted import path
+import api from '../api'; // Updated to use default import
 import { PlusIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 export default function ViewSubcategoriesPage() {
-  const { categoryId } = useParams();
+  const { id: categoryId } = useParams();
   const navigate = useNavigate();
 
   const [subcategories, setSubcategories] = useState([]);
@@ -18,7 +18,7 @@ export default function ViewSubcategoriesPage() {
   const fetchCategoryDetails = async () => {
     try {
       setLoadingCategory(true);
-      const data = await categoryApi.getById(categoryId);
+      const data = await api.category.getById(categoryId);
       setCategory(data);
     } catch (err) {
       setError(`Failed to load category details: ${err.message || 'Unknown error'}`);
@@ -31,7 +31,7 @@ export default function ViewSubcategoriesPage() {
   const fetchSubcategories = async () => {
     try {
       setLoading(true);
-      const data = await subCategoryApi.getByCategoryId(categoryId);
+      const data = await api.subCategory.getByCategoryId(categoryId);
       setSubcategories(Array.isArray(data) ? data : []); // Ensure data is an array
       setError(null);
     } catch (err) {
@@ -63,7 +63,7 @@ export default function ViewSubcategoriesPage() {
     }
     try {
       setLoading(true); // Or a specific loading state for creation
-      await subCategoryApi.create({ 
+      await api.subCategory.create({ 
         subCategoryName: newSubcategoryName, 
         categoryId: categoryId 
       });

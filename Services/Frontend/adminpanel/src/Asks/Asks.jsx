@@ -59,12 +59,13 @@ export default function Asks() {
       const askToUpdate = asks.find(ask => ask.id === id)
       if (!askToUpdate) return
       
-      // Update only the answer, keeping the original question
+      // Update only the answer, keeping all original fields intact
       const updateData = {
-        id: id,
-        question: askToUpdate.question,  // Keep original question
-        answer: answerText,              // Update answer
-        userId: askToUpdate.userId       // Keep user ID reference
+        Id: id,
+        UserId: askToUpdate.userId,        // Required field
+        UserName: askToUpdate.user,        // Required field that was missing
+        Question: askToUpdate.question,    // Required field
+        Answer: answerText                 // The new answer
       }
       
       await api.askAdmin.update(id, updateData)

@@ -43,6 +43,24 @@ namespace Backend
                     options.EnableDetailedErrors(); // For development debugging
                 });
 
+                // Add CORS policy
+                builder.Services.AddCors(options =>
+                {
+                    options.AddPolicy("AllowFrontend", policy =>
+                    {
+                        policy.WithOrigins(
+                            "http://localhost:5173",  // Retailer app
+                            "http://localhost:5174",  // Admin panel
+                            "http://localhost:3000",  // Alternative port
+                            "http://localhost:5175",  // Vendor app
+                            "http://localhost:5176"   // Another alternative
+                        )
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
+                    });
+                });
+
                 builder.Services.AddControllers();
                 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
                 builder.Services.AddEndpointsApiExplorer();
@@ -73,6 +91,9 @@ namespace Backend
                 }
 
                 app.UseHttpsRedirection();
+
+                // Enable CORS
+                app.UseCors("AllowFrontend");
 
                 app.UseAuthorization();
 

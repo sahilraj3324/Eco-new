@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { categoryApi } from '../api'; // Adjusted import path
+import api from '../api'; // Updated to use default import
 import { PlusIcon, EyeIcon } from '@heroicons/react/24/outline'; // Using heroicons for icons
 
 export default function CategoryPage() {
@@ -14,7 +14,7 @@ export default function CategoryPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const data = await categoryApi.getAll();
+      const data = await api.category.getAll();
       setCategories(data);
       setError(null);
     } catch (err) {
@@ -37,7 +37,7 @@ export default function CategoryPage() {
     }
     try {
       setLoading(true); // Consider a different loading state for creation
-      await categoryApi.create({ categoryName: newCategoryName });
+      await api.category.create({ categoryName: newCategoryName });
       setNewCategoryName('');
       setSuccessMessage('Category created successfully!');
       fetchCategories(); // Refresh the list

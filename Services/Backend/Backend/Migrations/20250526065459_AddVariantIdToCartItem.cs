@@ -4,7 +4,7 @@
 
 namespace Backend.Migrations
 {
-    public partial class update2 : Migration
+    public partial class AddVariantIdToCartItem : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

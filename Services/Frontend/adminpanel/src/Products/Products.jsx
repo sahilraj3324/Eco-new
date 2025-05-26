@@ -176,7 +176,7 @@ export default function Products() {
               
               <div className="mt-4 flex justify-end space-x-3 border-t border-gray-200 pt-3">
                 <Link
-                  to={`/products/view/${product.id}`}
+                  to={`/products/${product.id}`}
                   className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 hover:text-blue-900"
                 >
                   View
@@ -296,7 +296,7 @@ export default function Products() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm space-x-2">
                       <Link
-                        to={`/products/view/${product.id}`}
+                        to={`/products/${product.id}`}
                         className="text-blue-600 hover:text-blue-900 mr-2"
                       >
                         View

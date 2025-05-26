@@ -4,7 +4,7 @@
 
 namespace Backend.Migrations
 {
-    public partial class AddColorSizeToCartItems : Migration
+    public partial class Cart : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

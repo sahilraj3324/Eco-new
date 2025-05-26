@@ -90,9 +90,12 @@ export default function ViewProduct() {
       try {
         setLoading(true);
         setError(null);
+        console.log('Fetching product details for ID:', id);
         const data = await api.product.getById(id); // Assuming an API method like getById
+        console.log('Product data received:', data);
         setProduct(data);
       } catch (err) {
+        console.error('Error fetching product details:', err);
         setError(err.message || 'Failed to fetch product details');
         setProduct(null);
       } finally {
@@ -139,9 +142,41 @@ export default function ViewProduct() {
   }
   
   // Normalize imageUrls to ensure it's always an array
-  const imageUrls = Array.isArray(product.imageUrls) 
-    ? product.imageUrls 
-    : (product.mainImage ? [product.mainImage] : []);
+  const imageUrls = (() => {
+    let urls = [];
+    
+    // Try to get imageUrls from different possible sources
+    if (Array.isArray(product.imageUrls)) {
+      urls = product.imageUrls;
+    } else if (typeof product.imageUrls === 'string') {
+      try {
+        // Try to parse as JSON string
+        const parsed = JSON.parse(product.imageUrls);
+        if (Array.isArray(parsed)) {
+          urls = parsed;
+        }
+      } catch (e) {
+        // If parsing fails, treat as single URL
+        urls = [product.imageUrls];
+      }
+    } else if (typeof product.imageUrlsJson === 'string') {
+      try {
+        const parsed = JSON.parse(product.imageUrlsJson);
+        if (Array.isArray(parsed)) {
+          urls = parsed;
+        }
+      } catch (e) {
+        console.warn('Failed to parse imageUrlsJson:', e);
+      }
+    }
+    
+    // Add main image if available and not already in urls
+    if (product.mainImage && !urls.includes(product.mainImage)) {
+      urls.unshift(product.mainImage); // Add to beginning
+    }
+    
+    return urls.filter(url => url && url.trim() !== ''); // Remove empty URLs
+  })();
 
   return (
     <div className="container mx-auto p-4 md:p-8 bg-gray-50 min-h-screen">
@@ -218,7 +253,7 @@ export default function ViewProduct() {
         
         <div className="p-4 md:p-6 border-t flex justify-end space-x-3">
             <Link 
-                to={`/products/${product.id}`} // Link to the edit page
+                to={`/products/${product.id}/edit`} // Link to the edit page
                 className="px-6 py-2 rounded-md bg-cyan-500 text-white hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 transition-colors duration-150"
             >
                 Edit Product

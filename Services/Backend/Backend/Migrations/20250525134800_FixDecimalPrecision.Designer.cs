@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Backend.Migrations
 {
     [DbContext(typeof(EcoContext))]
-    [Migration("20250523110618_qwert")]
-    partial class qwert
+    [Migration("20250525134800_FixDecimalPrecision")]
+    partial class FixDecimalPrecision
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -256,6 +256,7 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -335,6 +336,7 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("SellerId")

@@ -4,7 +4,7 @@ const react = require('@vitejs/plugin-react');
 module.exports = defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    port: 5174,
     proxy: {
       '/api': {
         target: 'https://localhost:7209',

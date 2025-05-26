@@ -3,13 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../Vendor/src/Firebase/firebase';
+import Papa from 'papaparse';
+import { v4 as uuidv4 } from 'uuid';
+import { CloudUpload } from 'lucide-react';
 
 const AddProduct = () => {
   const navigate = useNavigate();
   const { vendorId } = useParams();
+  const [activeTab, setActiveTab] = useState('single'); // 'single' or 'bulk'
   const [sellerId, setSellerId] = useState('');
-  const [uploadedImages, setUploadedImages] = useState([]);
-  const [mainImageFile, setMainImageFile] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -17,7 +19,13 @@ const AddProduct = () => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
-  const [product, setProduct] = useState({
+  // Single Product States
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [mainImageFile, setMainImageFile] = useState(null);
+  const [newColor, setNewColor] = useState('');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const [information, setInformation] = useState({
     name: '',
     description: '',
     price: 0,
@@ -36,10 +44,33 @@ const AddProduct = () => {
     sleeveLength: '',
     shipsIn: '',
     brand: '',
-    sizes: [],
-    colors: [],
-    weights: {},
+    variants: [],
+    top: 'false',
+    trending: 'false'
   });
+
+  // Bulk Upload States
+  const [csvFile, setCsvFile] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const colorPalette = [
+    { name: 'Red', value: '#FF0000' },
+    { name: 'Blue', value: '#0000FF' },
+    { name: 'Green', value: '#008000' },
+    { name: 'Black', value: '#000000' },
+    { name: 'White', value: '#FFFFFF' },
+    { name: 'Yellow', value: '#FFFF00' },
+    { name: 'Purple', value: '#800080' },
+    { name: 'Pink', value: '#FFC0CB' },
+    { name: 'Grey', value: '#808080' },
+    { name: 'Brown', value: '#A52A2A' },
+    { name: 'Orange', value: '#FFA500' },
+    { name: 'Navy', value: '#000080' },
+    { name: 'Teal', value: '#008080' },
+    { name: 'Maroon', value: '#800000' },
+    { name: 'Olive', value: '#808000' }
+  ];
 
   useEffect(() => {
     if (vendorId) {
@@ -79,14 +110,14 @@ const AddProduct = () => {
   // Fetch subcategories when category changes
   useEffect(() => {
     const fetchSubcategories = async () => {
-      if (!product.category) {
+      if (!information.category) {
         setSubcategories([]);
         return;
       }
 
       try {
         setLoadingSubcategories(true);
-        const data = await api.subCategory.getByCategoryId(product.category);
+        const data = await api.subCategory.getByCategoryId(information.category);
         setSubcategories(data);
       } catch (err) {
         console.error('Error fetching subcategories:', err);
@@ -97,30 +128,7 @@ const AddProduct = () => {
     };
 
     fetchSubcategories();
-  }, [product.category]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'category') {
-      // Reset subcategory when category changes
-      setProduct(prev => ({
-        ...prev,
-        [name]: value,
-        subcategory: ''
-      }));
-    } else {
-      setProduct(prev => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleImageUpload = (e) => {
-    setUploadedImages(Array.from(e.target.files));
-  };
-
-  const handleMainImageUpload = (e) => {
-    const file = e.target.files[0];
-    setMainImageFile(file);
-  };
+  }, [information.category]);
 
   const uploadToFirebase = (file, path) => {
     return new Promise((resolve, reject) => {
@@ -139,60 +147,111 @@ const AddProduct = () => {
     });
   };
 
-  const handleCheckboxChange = (e) => {
-    const { name, value, checked } = e.target;
-    setProduct((prev) => {
-      const updatedArray = checked
-        ? [...prev[name], value]
-        : prev[name].filter((item) => item !== value);
-      return { ...prev, [name]: updatedArray };
-    });
+  // Single Product Functions
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setInformation((prev) => ({ ...prev, [name]: value }));
+
+    // Reset subcategory when category changes
+    if (name === 'category') {
+      setInformation(prev => ({ ...prev, subcategory: '' }));
+    }
   };
 
-  const handleSizeChange = (e) => {
-    const { value, checked } = e.target;
-    setProduct((prev) => {
-      let updatedSizes = checked
-        ? [...prev.sizes, value]
-        : prev.sizes.filter((s) => s !== value);
+  const handleImageUpload = (e) => {
+    setUploadedImages(Array.from(e.target.files));
+  };
 
-      let updatedWeights = { ...prev.weights };
+  const handleMainImageUpload = (e) => {
+    const file = e.target.files[0];
+    setMainImageFile(file);
+  };
+
+  const handleAddColor = (colorName, colorValue) => {
+    if (colorName && !information.variants.some(v => v.color === colorName)) {
+      setInformation(prev => ({
+        ...prev,
+        variants: [...prev.variants, {
+          color: colorName,
+          colorValue: colorValue,
+          sizes: []
+        }]
+      }));
+      setNewColor('');
+      setShowColorPicker(false);
+    }
+  };
+
+  const handleSizeChange = (colorIndex, size, checked) => {
+    setInformation(prev => {
+      const updatedVariants = [...prev.variants];
+      const variant = updatedVariants[colorIndex];
       if (checked) {
-        updatedWeights[value] = '';
+        // Only add if not already present
+        if (!variant.sizes.some(s => s.size === size)) {
+          variant.sizes = [...variant.sizes, {
+            size,
+            weight: '',
+            stock: '',
+            price: ''
+          }];
+        }
       } else {
-        delete updatedWeights[value];
+        // Remove size from the color variant
+        variant.sizes = variant.sizes.filter(s => s.size !== size);
       }
-
       return {
         ...prev,
-        sizes: updatedSizes,
-        weights: updatedWeights,
+        variants: updatedVariants
       };
     });
   };
 
-  const handleWeightChange = (size, value) => {
-    setProduct((prev) => ({
+  const handleVariantChange = (colorIndex, sizeIndex, field, value) => {
+    setInformation(prev => {
+      const updatedVariants = [...prev.variants];
+      const variant = updatedVariants[colorIndex];
+      variant.sizes[sizeIndex] = {
+        ...variant.sizes[sizeIndex],
+        [field]: value
+      };
+      return {
+        ...prev,
+        variants: updatedVariants
+      };
+    });
+  };
+
+  const handleRemoveColor = (colorIndex) => {
+    setInformation(prev => ({
       ...prev,
-      weights: {
-        ...prev.weights,
-        [size]: value,
-      },
+      variants: prev.variants.filter((_, index) => index !== colorIndex)
     }));
   };
 
-  const handleAddProduct = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
-
-    if (!product.name || !product.price || !product.stock || !sellerId) {
+    
+    if (!information.name || !information.price || !sellerId) {
       setMessage('❌ Please fill all required fields.');
       setLoading(false);
       return;
     }
 
+    // Validate variants
+    const invalidVariants = information.variants.some(
+      v => !v.color || v.sizes.length === 0 || v.sizes.some(s => !s.stock || !s.price)
+    );
+    if (invalidVariants) {
+      setMessage('❌ Please fill all variant details (color, sizes, and stock).');
+      setLoading(false);
+      return;
+    }
+
     try {
+      // Upload images
       const imageUrls = await Promise.all(
         uploadedImages.map((file) => uploadToFirebase(file, 'products'))
       );
@@ -201,31 +260,62 @@ const AddProduct = () => {
         ? await uploadToFirebase(mainImageFile, 'products')
         : '';
 
-      const variants = [];
-      for (const size of product.sizes) {
-        for (const color of product.colors) {
-          variants.push({
-            Size: size,
-            Color: color,
-            Weight: product.weights[size] || '',
-          });
-        }
-      }
+      // Flatten variants for API
+      const flattenedVariants = information.variants.flatMap(variant => 
+        variant.sizes.map(size => ({
+          id: uuidv4(),
+          color: variant.color,
+          size: size.size,
+          weight: size.weight || '',
+          stock: size.stock,
+          price: Number(size.price) || 0
+        }))
+      );
 
-      const newProduct = {
-        ...product,
-        sellerId,
+      // Calculate total stock
+      const totalStock = flattenedVariants.reduce((sum, variant) => {
+        return sum + (parseInt(variant.stock) || 0);
+      }, 0);
+
+      // Find category and subcategory names from IDs
+      const selectedCategory = categories.find(cat => cat.id === information.category);
+      const selectedSubcategory = subcategories.find(subcat => subcat.id === information.subcategory);
+
+      const product = {
+        name: information.name,
+        description: information.description,
+        price: parseFloat(information.price),
+        stock: totalStock,
+        sellerId: sellerId,
+        category: selectedCategory ? selectedCategory.categoryName : information.category,
+        subcategory: selectedSubcategory ? selectedSubcategory.subCategoryName : information.subcategory,
+        gst: information.gst,
+        hsn1: information.hsn1,
+        moq: information.moq,
+        piecesPerPack: information.piecesPerPack,
+        material: information.material,
+        fitShape: information.fitShape,
+        neckType: information.neckType,
+        occasion: information.occasion,
+        pattern: information.pattern,
+        sleeveLength: information.sleeveLength,
+        shipsIn: information.shipsIn,
+        brand: information.brand,
         mainImage: mainImageUrl,
-        imageUrls,
+        imageUrls: imageUrls,
         imageUrlsJson: JSON.stringify(imageUrls),
-        variants,
-        variantsJson: JSON.stringify(variants),
+        variants: flattenedVariants,
+        variantsJson: JSON.stringify(flattenedVariants),
         status: 'In Review',
+        top: information.top,
+        trending: information.trending
       };
 
-      await api.product.add(newProduct);
+      await api.product.add(product);
       setMessage('✅ Product added successfully!');
-      setProduct({
+      
+      // Reset form
+      setInformation({
         name: '',
         description: '',
         price: 0,
@@ -244,339 +334,710 @@ const AddProduct = () => {
         sleeveLength: '',
         shipsIn: '',
         brand: '',
-        sizes: [],
-        colors: [],
-        weights: {},
+        variants: [],
+        top: 'false',
+        trending: 'false'
       });
       setUploadedImages([]);
       setMainImageFile(null);
-    } catch (error) {
-      console.error('❌ Upload failed:', error);
-      setMessage(`❌ Upload failed: ${error.response?.data?.message || 'Unknown error'}`);
+    } catch (err) {
+      console.error('❌ Upload failed:', err);
+      setMessage(`❌ Upload failed: ${err.response?.data?.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8 flex justify-center">
-      <div className="w-full max-w-6xl">
-        <form onSubmit={handleAddProduct}>
-          <div className="bg-white rounded-xl shadow-md p-6 md:p-8 mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-start mb-5 text-gray-500">
-              Add Product
-            </h2>
+  // Bulk Upload Functions
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setCsvFile(file);
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <select
-                name="category"
-                value={product.category}
-                onChange={handleInputChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-                disabled={loadingCategories}
-              >
-                <option value="">Select Category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.categoryName}
-                  </option>
-                ))}
-              </select>
+    Papa.parse(file, {
+      header: true,
+      transformHeader: (header) => header.trim(),
+      complete: (result) => {
+        const parsed = result.data.map((item) => {
+          // Parse variants string into array of objects
+          const variantStrings = item.variants?.split('|') || [];
+          const variants = variantStrings.map((v) => {
+            const [size, color, weight, stock, price] = v.split(',');
+            return {
+              id: uuidv4(),
+              size: size?.trim() || '',
+              color: color?.trim() || '',
+              weight: weight?.trim() || '',
+              stock: stock?.trim() || '',
+              price: Number(price) || 0
+            };
+          });
 
-              <select
-                name="subcategory"
-                value={product.subcategory}
-                onChange={handleInputChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-                disabled={loadingSubcategories || !product.category}
-              >
-                <option value="">Select Subcategory</option>
-                {subcategories.map((subcategory) => (
+          return {
+            id: uuidv4(),
+            name: item.name?.trim() || '',
+            description: item.description?.trim() || '',
+            price: parseFloat(item.price) || 0,
+            stock: parseInt(item.stock, 10) || 0,
+            sellerId,
+            category: item.category?.trim() || '',
+            brand: item.brand?.trim() || '',
+            material: item.material?.trim() || '',
+            status: 'In Review',
+            imageFiles: [],
+            imageUrls: [],
+            imageUrlsJson: '[]',
+            variants,
+            variantsJson: JSON.stringify(variants),
+            createdAt: new Date().toISOString(),
+            subcategory: item.subcategory?.trim() || '',
+            gst: item.gst?.trim() || '5%',
+            hsn1: item.hsn1?.trim() || '',
+            moq: item.moq?.trim() || '',
+            piecesPerPack: item.piecesPerPack?.trim() || '',
+            fitShape: item.fitShape?.trim() || '',
+            neckType: item.neckType?.trim() || '',
+            occasion: item.occasion?.trim() || '',
+            pattern: item.pattern?.trim() || '',
+            sleeveLength: item.sleeveLength?.trim() || '',
+            shipsIn: item.shipsIn?.trim() || '',
+            mainImage: '',
+            top: 'false',
+            trending: 'false'
+          };
+        });
+
+        setProducts(parsed);
+      }
+    });
+  };
+
+  const handleBulkImageUpload = (e, index) => {
+    const files = Array.from(e.target.files);
+    setProducts((prev) => {
+      const updated = [...prev];
+      updated[index].imageFiles = files;
+      return updated;
+    });
+  };
+
+  const uploadImagesToFirebase = async (product) => {
+    const urls = [];
+
+    for (const file of product.imageFiles) {
+      const fileName = `${product.id}_${file.name}`;
+      const fileRef = ref(storage, `products/${fileName}`);
+      const snapshot = await uploadBytesResumable(fileRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      urls.push(downloadURL);
+    }
+
+    return urls;
+  };
+
+  const handleBulkUpload = async () => {
+    if (!products.length) {
+      setMessage('Please upload a CSV first.');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const finalProducts = [];
+
+      for (const product of products) {
+        const imageUrls = await uploadImagesToFirebase(product);
+        finalProducts.push({
+          ...product,
+          imageUrls,
+          imageUrlsJson: JSON.stringify(imageUrls),
+          mainImage: imageUrls[0] || '',
+          variantsJson: JSON.stringify(product.variants)
+        });
+      }
+
+      await api.product.addBulk(finalProducts);
+      setMessage(`✅ Uploaded ${finalProducts.length} products successfully.`);
+      
+      // Reset bulk upload
+      setCsvFile(null);
+      setProducts([]);
+    } catch (error) {
+      console.error('Backend error:', error.response?.data || error.message);
+      setMessage('❌ Failed to upload products. See console for details.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const renderSingleProduct = () => (
+    <form onSubmit={handleSubmit}>
+      <div className="bg-white rounded-xl shadow-md p-6 md:p-8 mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-start mb-5 text-gray-500">
+          Add Single Product To Your Catalogue
+        </h2>
+
+        {/* Category & Subcategory */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <select
+              name="category"
+              value={information.category}
+              onChange={handleChange}
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              disabled={loadingCategories}
+            >
+              <option value="">Select Category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.categoryName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <select
+              name="subcategory"
+              value={information.subcategory}
+              onChange={handleChange}
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              disabled={!information.category || loadingSubcategories}
+            >
+              <option value="">Select Subcategory</option>
+              {loadingSubcategories ? (
+                <option disabled>Loading subcategories...</option>
+              ) : subcategories.length === 0 ? (
+                <option disabled>No subcategories available</option>
+              ) : (
+                subcategories.map((subcategory) => (
                   <option key={subcategory.id} value={subcategory.id}>
                     {subcategory.subCategoryName}
                   </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <select
-                name="gst"
-                value={product.gst}
-                onChange={handleInputChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-              >
-                <option value="">Select GST</option>
-                <option value="5%">5%</option>
-                <option value="12%">12%</option>
-              </select>
-
-              <select
-                name="hsn1"
-                value={product.hsn1}
-                onChange={handleInputChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-              >
-                <option value="">Select HSN Code</option>
-                <option value="6109">6109 - T-shirts</option>
-                <option value="6204">6204 - Women's Garments</option>
-                <option value="6110">6110 - Sweaters</option>
-                <option value="6403">6403 - Footwear</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Select Size</h3>
-                <div className="flex gap-4">
-                  {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                    <label key={size} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        value={size}
-                        checked={product.sizes.includes(size)}
-                        onChange={handleSizeChange}
-                        className="mr-2"
-                      />
-                      {size}
-                    </label>
-                  ))}
-                </div>
-
-                {product.sizes.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-semibold mb-2">Enter Weight for Selected Sizes</h4>
-                    {product.sizes.map((size) => (
-                      <div key={size} className="mb-2">
-                        <label className="block mb-1">{size} Weight (kg):</label>
-                        <input
-                          type="text"
-                          value={product.weights[size] || ''}
-                          onChange={(e) => handleWeightChange(size, e.target.value)}
-                          className="p-2 border rounded w-full"
-                          placeholder={`Enter weight for size ${size}`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold mb-2">Select Color</h3>
-                <div className="flex gap-4">
-                  {['Red', 'Blue', 'Green', 'Black'].map((c) => (
-                    <label key={c} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="colors"
-                        value={c}
-                        checked={product.colors.includes(c)}
-                        onChange={handleCheckboxChange}
-                        className="mr-2"
-                      />
-                      {c}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="space-y-4">
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="name"
-                  placeholder="Product Name"
-                  value={product.name}
-                  onChange={handleInputChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="moq"
-                  placeholder="MOQ (packs)"
-                  value={product.moq}
-                  onChange={handleInputChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="piecesPerPack"
-                  placeholder="Pieces per Pack"
-                  value={product.piecesPerPack}
-                  onChange={handleInputChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="material"
-                  placeholder="Fabric Material"
-                  value={product.material}
-                  onChange={handleInputChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="fitShape"
-                  placeholder="Fit Shape"
-                  value={product.fitShape}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="neckType"
-                  value={product.neckType}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Neck Type</option>
-                  <option>Round Neck</option>
-                  <option>V-Neck</option>
-                  <option>Collar</option>
-                  <option>Boat Neck</option>
-                </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="occasion"
-                  value={product.occasion}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Occasion</option>
-                  <option>Casual</option>
-                  <option>Formal</option>
-                  <option>Party</option>
-                  <option>Festive</option>
-                </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="pattern"
-                  value={product.pattern}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Pattern</option>
-                  <option>Solid</option>
-                  <option>Striped</option>
-                  <option>Printed</option>
-                  <option>Checked</option>
-                </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="sleeveLength"
-                  value={product.sleeveLength}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Sleeve Length</option>
-                  <option>Sleeveless</option>
-                  <option>Short Sleeve</option>
-                  <option>Half Sleeve</option>
-                  <option>Full Sleeve</option>
-                </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="shipsIn"
-                  value={product.shipsIn}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Ships In (Days)</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full"
-                  name="brand"
-                  value={product.brand}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Brand</option>
-                  <option>Brand A</option>
-                  <option>Brand B</option>
-                  <option>Brand C</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <input
-                className="p-3 rounded-lg bg-gray-100 w-full"
-                name="price"
-                type="number"
-                placeholder="Price (INR)"
-                value={product.price}
-                onChange={handleInputChange}
-              />
-              <input
-                className="p-3 rounded-lg bg-gray-100 w-full"
-                name="stock"
-                type="number"
-                placeholder="Stock"
-                value={product.stock}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div className="mb-6">
-              <textarea
-                className="p-3 rounded-lg bg-gray-100 w-full"
-                name="description"
-                placeholder="Description"
-                value={product.description}
-                onChange={handleInputChange}
-              ></textarea>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-gray-600 mb-2">Main Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleMainImageUpload}
-                className="w-full p-3 rounded-lg bg-gray-100"
-              />
-              {mainImageFile && (
-                <img
-                  src={URL.createObjectURL(mainImageFile)}
-                  alt="Main"
-                  className="w-32 h-40 object-cover rounded mx-auto mt-4"
-                />
+                ))
               )}
-            </div>
+            </select>
+          </div>
+        </div>
 
-            <div className="mb-6">
-              <label className="block text-gray-600 mb-2">Additional Images</label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="w-full p-3 rounded-lg bg-gray-100"
-              />
-              <div className="flex flex-wrap gap-4 mt-4">
-                {uploadedImages.map((img, i) => (
-                  <img
-                    key={i}
-                    src={URL.createObjectURL(img)}
-                    alt={`Upload ${i}`}
-                    className="w-20 h-24 object-cover rounded"
+        {/* GST & HSN */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <select
+            name="gst"
+            value={information.gst}
+            onChange={handleChange}
+            className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+          >
+            <option value="">Select GST</option>
+            <option value="5%">5%</option>
+            <option value="12%">12%</option>
+          </select>
+
+          <select
+            name="hsn1"
+            value={information.hsn1}
+            onChange={handleChange}
+            className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+          >
+            <option value="">Select HSN Code</option>
+            <option value="6109">6109 - T-shirts</option>
+            <option value="6204">6204 - Women's Garments</option>
+            <option value="6110">6110 - Sweaters</option>
+            <option value="6403">6403 - Footwear</option>
+          </select>
+        </div>
+
+        {/* Sizes & Colors */}
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-4">Product Variants</h3>
+          
+          {/* Add Color Input */}
+          <div className="mb-6">
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Add Color</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    onFocus={() => setShowColorPicker(true)}
+                    className="p-2 border rounded w-full"
+                    placeholder="Select or enter color name"
                   />
-                ))}
+                  {showColorPicker && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg p-4">
+                      <div className="grid grid-cols-3 gap-2">
+                        {colorPalette.map((color) => (
+                          <button
+                            key={color.name}
+                            type="button"
+                            onClick={() => handleAddColor(color.name, color.value)}
+                            className="flex items-center gap-2 p-2 rounded hover:bg-gray-100"
+                          >
+                            <div
+                              className="w-6 h-6 rounded-full border"
+                              style={{ backgroundColor: color.value }}
+                            />
+                            <span>{color.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newColor}
+                            onChange={(e) => setNewColor(e.target.value)}
+                            className="flex-1 p-2 border rounded"
+                            placeholder="Or enter custom color name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddColor(newColor, '#000000')}
+                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                          >
+                            Add Custom
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-
-            {message && (
-              <p className="text-center text-xl font-bold mb-6">{message}</p>
-            )}
-            <div className="text-center">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-cyan-500 text-white p-3 rounded shadow-md hover:bg-blue-700 transition-all duration-300"
-              >
-                {loading ? 'Submitting...' : 'Add Product'}
-              </button>
             </div>
           </div>
-        </form>
+
+          {/* Color Variants */}
+          {information.variants.length > 0 && (
+            <div className="space-y-6">
+              {information.variants.map((variant, colorIndex) => (
+                <div key={colorIndex} className="border p-4 rounded-lg bg-gray-50">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-6 h-6 rounded-full border"
+                        style={{ backgroundColor: variant.colorValue || variant.color.toLowerCase() }}
+                      />
+                      <h4 className="text-lg font-semibold">{variant.color}</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveColor(colorIndex)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  {/* Size Selection */}
+                  <div className="mb-4">
+                    <h5 className="font-medium mb-2">Select Sizes</h5>
+                    <div className="flex gap-4">
+                      {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                        <label key={size} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={variant.sizes.some(s => s.size === size)}
+                            onChange={(e) => handleSizeChange(colorIndex, size, e.target.checked)}
+                            className="mr-2"
+                          />
+                          {size}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Size Details */}
+                  {variant.sizes.length > 0 && (
+                    <div className="space-y-4">
+                      <h5 className="font-medium">Size Details</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {variant.sizes.map((sizeVariant, sizeIndex) => (
+                          <div key={sizeIndex} className="bg-white rounded border p-3">
+                            <div className="mb-2">
+                              <label className="block text-sm font-medium">Size {sizeVariant.size}</label>
+                            </div>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-sm text-gray-600">Weight (kg)</label>
+                                <input
+                                  type="text"
+                                  value={sizeVariant.weight || ''}
+                                  onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'weight', e.target.value)}
+                                  className="p-2 border rounded w-full"
+                                  placeholder="Enter weight"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-gray-600">Stock</label>
+                                <input
+                                  type="number"
+                                  value={sizeVariant.stock || ''}
+                                  onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'stock', e.target.value)}
+                                  className="p-2 border rounded w-full"
+                                  placeholder="Enter stock"
+                                  min="0"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-gray-600">Price</label>
+                                <input
+                                  type="number"
+                                  value={sizeVariant.price || ''}
+                                  onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'price', e.target.value)}
+                                  className="p-2 border rounded w-full"
+                                  placeholder="Enter Price"
+                                  min="0"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Other Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="space-y-4">
+            <input
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="name"
+              type="text"
+              required
+              placeholder="Product Name"
+              value={information.name}
+              onChange={handleChange}
+              style={{
+                borderColor: !information.name ? '#ef4444' : '#d1d5db',
+                backgroundColor: !information.name ? '#fef2f2' : '#f3f4f6'
+              }}
+            />
+            <input
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="moq"
+              placeholder="MOQ (packs)"
+              value={information.moq}
+              onChange={handleChange}
+            />
+            <input
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="piecesPerPack"
+              placeholder="Pieces per Pack"
+              value={information.piecesPerPack}
+              onChange={handleChange}
+            />
+            <input
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="material"
+              placeholder="Fabric Material"
+              value={information.material}
+              onChange={handleChange}
+            />
+            <input
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="fitShape"
+              placeholder="Fit Shape"
+              value={information.fitShape}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <select
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="neckType"
+              value={information.neckType}
+              onChange={handleChange}
+            >
+              <option value="">Select Neck Type</option>
+              <option value="Round Neck">Round Neck</option>
+              <option value="V-Neck">V-Neck</option>
+              <option value="Collar">Collar</option>
+              <option value="Boat Neck">Boat Neck</option>
+            </select>
+            <select
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="occasion"
+              value={information.occasion}
+              onChange={handleChange}
+            >
+              <option value="">Select Occasion</option>
+              <option value="Casual">Casual</option>
+              <option value="Formal">Formal</option>
+              <option value="Party">Party</option>
+              <option value="Festive">Festive</option>
+            </select>
+            <select
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="pattern"
+              value={information.pattern}
+              onChange={handleChange}
+            >
+              <option value="">Select Pattern</option>
+              <option value="Solid">Solid</option>
+              <option value="Striped">Striped</option>
+              <option value="Printed">Printed</option>
+              <option value="Checked">Checked</option>
+            </select>
+            <select
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="sleeveLength"
+              value={information.sleeveLength}
+              onChange={handleChange}
+            >
+              <option value="">Sleeve Length</option>
+              <option value="Sleeveless">Sleeveless</option>
+              <option value="Short Sleeve">Short Sleeve</option>
+              <option value="Half Sleeve">Half Sleeve</option>
+              <option value="Full Sleeve">Full Sleeve</option>
+            </select>
+            <select
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="shipsIn"
+              value={information.shipsIn}
+              onChange={handleChange}
+            >
+              <option value="">Ships In (Days)</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+            <select
+              className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+              name="brand"
+              value={information.brand}
+              onChange={handleChange}
+            >
+              <option value="">Select Brand</option>
+              <option value="Brand A">Brand A</option>
+              <option value="Brand B">Brand B</option>
+              <option value="Brand C">Brand C</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Price, Stock, Description */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <input
+            className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+            name="price"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Price (INR)"
+            value={information.price}
+            onChange={handleChange}
+          />
+          <input
+            className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+            name="stock"
+            type="number"
+            min="0"
+            placeholder="Stock"
+            value={information.stock}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="mb-6">
+          <textarea
+            className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+            name="description"
+            placeholder="Description"
+            rows="4"
+            value={information.description}
+            onChange={handleChange}
+          ></textarea>
+        </div>
+
+        {/* Main Image Upload */}
+        <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+          <label className="block text-gray-600 mb-2 font-semibold">1. Main Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleMainImageUpload}
+            className="w-full p-3 rounded-lg bg-white border border-gray-300"
+          />
+          {mainImageFile && (
+            <div className="mt-4 flex justify-center">
+              <img
+                src={URL.createObjectURL(mainImageFile)}
+                alt="Main Preview"
+                className="w-32 h-40 object-cover rounded shadow-md"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Additional Images */}
+        <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+          <label className="block text-gray-600 mb-2 font-semibold">2. Additional Images</label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+            className="w-full p-3 rounded-lg bg-white border border-gray-300"
+          />
+          <div className="flex flex-wrap gap-4 mt-4">
+            {uploadedImages.map((img, i) => (
+              <div key={i} className="relative">
+                <span className="absolute -top-2 -left-2 bg-cyan-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md">
+                  {i + 1}
+                </span>
+                <img
+                  src={URL.createObjectURL(img)}
+                  alt={`Upload ${i + 1}`}
+                  className="w-20 h-24 object-cover rounded border-2 border-gray-200 shadow-md"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Submit */}
+        <div className="text-center">
+          <button
+            type="submit"
+            disabled={loading}
+            className={`bg-cyan-500 text-white p-3 px-8 rounded-full shadow-md hover:bg-cyan-600 transition-all duration-300 flex items-center justify-center mx-auto min-w-[160px] ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Submitting...
+              </>
+            ) : (
+              'Add Product'
+            )}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+
+  const renderBulkUpload = () => (
+    <div className="bg-white rounded-xl shadow-md p-6 md:p-8 mb-8">
+      <h2 className="text-2xl md:text-3xl font-bold text-center mb-5 text-gray-500">
+        Add Multiple Products To Your Catalogue
+      </h2>
+
+      <div className="bg-gray-200 p-6 rounded-2xl shadow-sm space-y-4 mb-6">
+        <h3 className="text-md font-semibold text-gray-700">Upload Catalogue (Upto 50 Products)</h3>
+
+        <div className="flex flex-col items-center text-center space-y-2">
+          <CloudUpload size={80} className="text-blue-500" />
+          <label className="cursor-pointer bg-blue-100 text-blue-700 px-4 py-2 rounded-md hover:bg-blue-200">
+            Upload CSV File
+            <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
+          </label>
+        </div>
+
+        <p className="text-xs text-gray-500">Only CSV File. Max Size 8 MB</p>
+        <p className="text-xs text-gray-500">Add product images below before uploading</p>
+      </div>
+
+      {products.length > 0 && (
+        <div className="mt-10 text-left">
+          <h3 className="text-lg font-semibold mb-4">Product Preview & Image Upload</h3>
+          <div className="space-y-4">
+            {products.map((product, index) => (
+              <div key={product.id} className="border p-4 rounded-lg shadow-sm">
+                <p className="font-medium text-xl text-gray-800">{product.name}</p>
+                <p className="text-sm text-gray-600">Category: {product.category}</p>
+                <p className="text-sm text-gray-600">Subcategory: {product.subcategory}</p>
+                <p className="font-semibold text-gray-900">Description: {product.description}</p>
+                <div className="mt-2">
+                  <label className="inline-block bg-cyan-600 text-white text-sm px-4 py-2 rounded-full cursor-pointer hover:bg-cyan-700 transition">
+                    Upload Images
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => handleBulkImageUpload(e, index)}
+                      className="hidden"
+                    />
+                  </label>
+                  <div className="mt-2 flex gap-2 flex-wrap">
+                    {product.imageFiles?.map((file, i) => (
+                      <img
+                        key={i}
+                        src={URL.createObjectURL(file)}
+                        alt="Preview"
+                        className="h-16 w-16 object-cover rounded"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      <div className="text-center mt-6">
+        <button
+          className="bg-cyan-600 text-white px-6 py-3 rounded-full hover:bg-cyan-700 transition-colors"
+          onClick={handleBulkUpload}
+          disabled={uploading}
+        >
+          {uploading ? 'Uploading...' : 'Upload Now'}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8 flex justify-center">
+      <div className="w-full max-w-6xl">
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-t-xl shadow-md p-4 mb-0">
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => setActiveTab('single')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                activeTab === 'single'
+                  ? 'bg-cyan-500 text-white shadow-md'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              Single Product
+            </button>
+            <button
+              onClick={() => setActiveTab('bulk')}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+                activeTab === 'bulk'
+                  ? 'bg-cyan-500 text-white shadow-md'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }`}
+            >
+              Bulk Upload
+            </button>
+          </div>
+        </div>
+
+        {/* Message Display */}
+        {message && (
+          <div className={`p-4 rounded-lg mb-4 text-center font-bold ${
+            message.includes('✅') 
+              ? 'bg-green-100 text-green-800 border border-green-300' 
+              : 'bg-red-100 text-red-800 border border-red-300'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        {/* Tab Content */}
+        {activeTab === 'single' ? renderSingleProduct() : renderBulkUpload()}
       </div>
     </div>
   );

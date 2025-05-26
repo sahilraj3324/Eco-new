@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Configuration files with sensitive data (database connection strings, JWT keys, etc.)
+# These files contain machine-specific and sensitive configuration that should not be committed
+Services/Backend/Backend/appsettings.json
+Services/Backend/Backend/appsettings.Development.json
+Services/Backend/Backend/Program.cs

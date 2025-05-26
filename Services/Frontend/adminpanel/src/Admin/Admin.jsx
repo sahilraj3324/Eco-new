@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
+import { isAdmin } from '../utils/auth';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('admins');
@@ -25,9 +26,19 @@ export default function Admin() {
     email: '',
     phone: '',
     password: '',
-    role: ''
+    roles: []
   });
   const [editingSubAdminId, setEditingSubAdminId] = useState(null);
+
+  // Role options for SubAdmin - now matching navigation items
+  const roleOptions = [
+    'vendors',
+    'products', 
+    'categories',
+    'retailers',
+    'orders',
+    'asks'
+  ];
 
   useEffect(() => {
     fetchData();
@@ -113,13 +124,22 @@ export default function Admin() {
     setSubAdminForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleRoleChange = (role) => {
+    setSubAdminForm(prev => ({
+      ...prev,
+      roles: prev.roles.includes(role)
+        ? prev.roles.filter(r => r !== role)
+        : [...prev.roles, role]
+    }));
+  };
+
   const resetSubAdminForm = () => {
     setSubAdminForm({
       name: '',
       email: '',
       phone: '',
       password: '',
-      role: ''
+      roles: []
     });
     setEditingSubAdminId(null);
   };
@@ -127,10 +147,17 @@ export default function Admin() {
   const handleSubAdminSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Prepare data with proper structure for API
+      const formData = {
+        ...subAdminForm,
+        Roles: subAdminForm.roles // Map to capital R for C# model
+      };
+      delete formData.roles; // Remove lowercase version
+
       if (editingSubAdminId) {
-        await api.subAdmin.update(editingSubAdminId, subAdminForm);
+        await api.subAdmin.update(editingSubAdminId, formData);
       } else {
-        await api.subAdmin.create(subAdminForm);
+        await api.subAdmin.create(formData);
       }
       fetchData();
       resetSubAdminForm();
@@ -147,7 +174,7 @@ export default function Admin() {
       email: subAdmin.email,
       phone: subAdmin.phone,
       password: subAdmin.password || '', // Password might not be returned from API
-      role: subAdmin.role || ''
+      roles: subAdmin.roles || subAdmin.Roles || [] // Handle both cases
     });
     setEditingSubAdminId(subAdmin.id);
     setShowSubAdminForm(true);
@@ -165,6 +192,40 @@ export default function Admin() {
     }
   };
 
+  // Role management for existing SubAdmins
+  const addRoleToSubAdmin = async (subAdminId, role) => {
+    try {
+      await api.subAdmin.addRole(subAdminId, role);
+      fetchData();
+    } catch (err) {
+      console.error('Error adding role:', err);
+      alert('Failed to add role. Please try again.');
+    }
+  };
+
+  const removeRoleFromSubAdmin = async (subAdminId, role) => {
+    try {
+      await api.subAdmin.removeRole(subAdminId, role);
+      fetchData();
+    } catch (err) {
+      console.error('Error removing role:', err);
+      alert('Failed to remove role. Please try again.');
+    }
+  };
+
+  // Check if user has permission to access admin management
+  if (!isAdmin()) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">🚫</div>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Access Denied</h2>
+          <p className="text-gray-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading && !admins.length && !subAdmins.length) {
     return (
       <div className="flex justify-center py-8">
@@ -176,7 +237,7 @@ export default function Admin() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Admin Management</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">Roles & Admin Management</h1>
       </div>
 
       {error && (
@@ -465,19 +526,28 @@ export default function Admin() {
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
                     />
                   </div>
-                  <div>
-                    <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                      Role
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Roles (Select multiple)
                     </label>
-                    <input
-                      type="text"
-                      id="role"
-                      name="role"
-                      value={subAdminForm.role}
-                      onChange={handleSubAdminChange}
-                      required
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-                    />
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {roleOptions.map(role => (
+                        <label key={role} className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={subAdminForm.roles.includes(role)}
+                            onChange={() => handleRoleChange(role)}
+                            className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                          />
+                          <span className="text-sm text-gray-700">
+                            {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {subAdminForm.roles.length === 0 && (
+                      <p className="mt-1 text-sm text-red-600">Please select at least one role</p>
+                    )}
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end">
@@ -493,7 +563,8 @@ export default function Admin() {
                   </button>
                   <button
                     type="submit"
-                    className="rounded-md bg-cyan-500 px-4 py-2 text-sm text-white hover:bg-cyan-600"
+                    disabled={subAdminForm.roles.length === 0}
+                    className="rounded-md bg-cyan-500 px-4 py-2 text-sm text-white hover:bg-cyan-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {editingSubAdminId ? 'Update Sub-Admin' : 'Create Sub-Admin'}
                   </button>
@@ -517,7 +588,7 @@ export default function Admin() {
                     Phone
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Role
+                    Roles
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Actions
@@ -538,21 +609,59 @@ export default function Admin() {
                         <div className="text-sm text-gray-500">{subAdmin.phone}</div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
-                        <div className="text-sm text-gray-500">{subAdmin.role}</div>
+                        <div className="text-sm text-gray-500">
+                          {(subAdmin.roles || subAdmin.Roles || []).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {(subAdmin.roles || subAdmin.Roles || []).map((role, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800"
+                                >
+                                  {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">No roles assigned</span>
+                          )}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                        <button
-                          onClick={() => editSubAdmin(subAdmin)}
-                          className="mr-2 text-cyan-600 hover:text-cyan-900"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteSubAdmin(subAdmin.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex flex-col space-y-1">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => editSubAdmin(subAdmin)}
+                              className="text-cyan-600 hover:text-cyan-900"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteSubAdmin(subAdmin.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {roleOptions.map(role => {
+                              const hasRole = (subAdmin.roles || subAdmin.Roles || []).includes(role);
+                              return (
+                                <button
+                                  key={role}
+                                  onClick={() => hasRole ? removeRoleFromSubAdmin(subAdmin.id, role) : addRoleToSubAdmin(subAdmin.id, role)}
+                                  className={`px-2 py-1 text-xs rounded ${
+                                    hasRole
+                                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                  }`}
+                                  title={hasRole ? `Remove ${role} role` : `Add ${role} role`}
+                                >
+                                  {hasRole ? '✓' : '+'} {role}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))

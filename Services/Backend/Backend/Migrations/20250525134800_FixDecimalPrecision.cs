@@ -4,7 +4,7 @@
 
 namespace Backend.Migrations
 {
-    public partial class asdf : Migration
+    public partial class FixDecimalPrecision : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
