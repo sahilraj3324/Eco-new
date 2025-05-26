@@ -35,19 +35,19 @@ const OrderSuccess = () => {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Success Header */}
         <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-center relative">
-          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+          <div className="flex justify-center mb-4">
             <div className="bg-white p-2 rounded-full shadow-lg">
               <CheckCircle className="h-12 w-12 text-green-600" strokeWidth={1.5} />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-white pt-4">Order Confirmed!</h1>
+          <h1 className="text-2xl font-bold text-white">Order Confirmed!</h1>
           <p className="text-green-100 font-medium mt-1">Payment Successful</p>
         </div>
         
         {/* Order Content */}
-        <div className="pt-10 px-6 pb-8 text-center">
+        <div className="px-6 pb-8 text-center">
           {/* Order Tracking Info */}
-          <div className="flex justify-center gap-6 mb-6">
+          {/* <div className="flex justify-center gap-6 mb-6">
             <div className="flex flex-col items-center">
               <div className="bg-blue-100 p-3 rounded-full mb-2">
                 <Mail className="h-5 w-5 text-blue-600" />
@@ -60,7 +60,7 @@ const OrderSuccess = () => {
               </div>
               <p className="text-xs text-gray-600">Preparing Order</p>
             </div>
-          </div>
+          </div> */}
 
           {/* Order Details */}
           <div className="bg-gray-50 rounded-xl p-5 mb-6 text-left border border-gray-100">
@@ -95,11 +95,11 @@ const OrderSuccess = () => {
           
           {/* Thank You Message */}
           <div className="mb-6">
-            <p className="text-gray-600">
+            <p className="text-sm text-gray-500">
               Thank you for your purchase! We've received your order and it's now being processed. 
             </p>
-            <p className="text-gray-600 mt-2">
-              You'll receive a confirmation email shortly with all the details.
+            <p className="text-sm text-gray-500 mt-2">
+              You'll receive a confirmation message shortly with all the details.
             </p>
           </div>
           
@@ -131,4 +131,4 @@ const OrderSuccess = () => {
   );
 };
 
-export default OrderSuccess;
+export default OrderSuccess; 
