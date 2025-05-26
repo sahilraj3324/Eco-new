@@ -65,7 +65,6 @@ const Cart = () => {
       {/* Header */}
       <div className="sticky top-0 bg-white z-50 shadow-sm rounded-b-xl px-4 py-3 flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <IoIosArrowRoundBack className="text-blue-500 text-2xl" />
           <h1 className="text-xl font-bold text-gray-800">My Cart</h1>
         </div>
         <div className="relative">
@@ -148,12 +147,7 @@ const Cart = () => {
                 <span>Total</span>
                 <span>₹{totals.total.toFixed(2)}</span>
               </div>
-              <button 
-                className="w-full py-4 bg-blue-500 text-white rounded-xl font-semibold text-base flex items-center justify-center gap-2 shadow-blue-200 shadow-md"
-                onClick={handleCheckout}
-              >
-                <BsCartCheck size={20} /> Proceed to Checkout
-              </button>
+
             </div>
           </>
         ) : (

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaStore, FaShoppingCart } from 'react-icons/fa';
 
 // ✅ Correct image imports
@@ -43,14 +44,16 @@ const sections = [
 ];
 
 const HomePage = () => {
+  const navigate = useNavigate();
+
   const handleLogoClick = () => {
     console.log("Logo clicked - navigate to home");
-    // Add navigation logic here
+    navigate('/');
   };
 
   const handleCartClick = () => {
     console.log("Cart clicked - navigate to cart");
-    // Add navigation logic here
+    navigate('/cart');
   };
 
   return (
