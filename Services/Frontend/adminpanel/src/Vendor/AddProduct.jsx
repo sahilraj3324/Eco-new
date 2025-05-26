@@ -12,6 +12,10 @@ const AddProduct = () => {
   const [mainImageFile, setMainImageFile] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
   const [product, setProduct] = useState({
     name: '',
@@ -54,9 +58,59 @@ const AddProduct = () => {
     }
   }, [vendorId]);
 
+  // Fetch categories when component loads
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const data = await api.category.getAll();
+        setCategories(data);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        setMessage('Failed to load categories');
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!product.category) {
+        setSubcategories([]);
+        return;
+      }
+
+      try {
+        setLoadingSubcategories(true);
+        const data = await api.subCategory.getByCategoryId(product.category);
+        setSubcategories(data);
+      } catch (err) {
+        console.error('Error fetching subcategories:', err);
+        setSubcategories([]);
+      } finally {
+        setLoadingSubcategories(false);
+      }
+    };
+
+    fetchSubcategories();
+  }, [product.category]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setProduct((prev) => ({ ...prev, [name]: value }));
+    if (name === 'category') {
+      // Reset subcategory when category changes
+      setProduct(prev => ({
+        ...prev,
+        [name]: value,
+        subcategory: ''
+      }));
+    } else {
+      setProduct(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -219,10 +273,14 @@ const AddProduct = () => {
                 value={product.category}
                 onChange={handleInputChange}
                 className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+                disabled={loadingCategories}
               >
                 <option value="">Select Category</option>
-                <option>Clothing</option>
-                <option>Footwear</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.categoryName}
+                  </option>
+                ))}
               </select>
 
               <select
@@ -230,10 +288,14 @@ const AddProduct = () => {
                 value={product.subcategory}
                 onChange={handleInputChange}
                 className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+                disabled={loadingSubcategories || !product.category}
               >
                 <option value="">Select Subcategory</option>
-                <option>T-Shirts</option>
-                <option>Sandals</option>
+                {subcategories.map((subcategory) => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.subCategoryName}
+                  </option>
+                ))}
               </select>
             </div>
 

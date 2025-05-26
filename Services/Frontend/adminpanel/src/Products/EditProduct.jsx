@@ -9,6 +9,10 @@ export default function EditProduct() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const [categories, setCategories] = useState([])
+  const [subcategories, setSubcategories] = useState([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false)
   
   // Product state with all fields from the schema
   const [product, setProduct] = useState({
@@ -74,6 +78,48 @@ export default function EditProduct() {
       setError('No product ID provided')
     }
   }, [id])
+
+  // Fetch categories when component loads
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true)
+        const data = await api.category.getAll()
+        setCategories(data)
+      } catch (err) {
+        console.error('Error fetching categories:', err)
+        setError('Failed to load categories')
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+
+    fetchCategories()
+  }, [])
+
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!product.category) {
+        setSubcategories([])
+        return
+      }
+
+      try {
+        setLoadingSubcategories(true)
+        const data = await api.subCategory.getByCategoryId(product.category)
+        setSubcategories(data)
+      } catch (err) {
+        console.error('Error fetching subcategories:', err)
+        // Don't set error here as it's not critical
+        setSubcategories([])
+      } finally {
+        setLoadingSubcategories(false)
+      }
+    }
+
+    fetchSubcategories()
+  }, [product.category])
 
   // Handle input changes for simple fields
   const handleInputChange = (e) => {
@@ -165,7 +211,9 @@ export default function EditProduct() {
         Pattern: product.pattern,
         SleeveLength: product.sleeveLength,
         ShipsIn: product.shipsIn,
-        MainImage: product.mainImage
+        MainImage: product.mainImage,
+        Top: product.top,
+        Trending: product.trending
       };
       
       console.log('Sending product data:', productData);
@@ -187,6 +235,42 @@ export default function EditProduct() {
     }
   };
 
+  // Function to toggle product field
+  const toggleProductField = async (field) => {
+    try {
+      setSaving(true);
+      setError(null);
+      const newValue = product[field] === 'true' ? 'false' : 'true';
+      const updatedProduct = { ...product, [field]: newValue };
+      await api.product.update(id, updatedProduct);
+      setProduct(updatedProduct);
+      setSuccessMessage(`Product ${newValue === 'true' ? 'marked as' : 'unmarked from'} ${field}`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(`Failed to update product: ${err.message || 'Unknown error'}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle category change
+  const handleCategoryChange = (e) => {
+    const categoryId = e.target.value
+    setProduct({
+      ...product,
+      category: categoryId,
+      subcategory: '' // Reset subcategory when category changes
+    })
+  }
+
+  // Handle subcategory change
+  const handleSubcategoryChange = (e) => {
+    setProduct({
+      ...product,
+      subcategory: e.target.value
+    })
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -204,6 +288,24 @@ export default function EditProduct() {
           className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
         >
           Back to Products
+        </button>
+      </div>
+
+      {/* Top and Trending Buttons */}
+      <div className="flex justify-end space-x-4 mb-4">
+        <button
+          type="button"
+          onClick={() => toggleProductField('top')}
+          className="inline-flex items-center rounded-md border border-transparent bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+        >
+          {product.top === 'true' ? 'Unmark as Top' : 'Mark as Top'}
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleProductField('trending')}
+          className="inline-flex items-center rounded-md border border-transparent bg-purple-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+        >
+          {product.trending === 'true' ? 'Unmark as Trending' : 'Mark as Trending'}
         </button>
       </div>
 
@@ -275,9 +377,9 @@ export default function EditProduct() {
               >
                 <option value="">Select Status</option>
                 <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Draft">Draft</option>
-                <option value="Discontinued">Discontinued</option>
+                <option value="Paused">Paused</option>
+                <option value="Rejected">Rejected</option>
+                
               </select>
             </div>
 
@@ -332,28 +434,42 @@ export default function EditProduct() {
               <label htmlFor="category" className="block text-sm font-medium text-gray-700">
                 Category
               </label>
-              <input
-                type="text"
+              <select
                 id="category"
                 name="category"
                 value={product.category}
-                onChange={handleInputChange}
+                onChange={handleCategoryChange}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-              />
+                disabled={loadingCategories}
+              >
+                <option value="">Select a category</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.categoryName}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
               <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700">
                 Subcategory
               </label>
-              <input
-                type="text"
+              <select
                 id="subcategory"
                 name="subcategory"
                 value={product.subcategory}
-                onChange={handleInputChange}
+                onChange={handleSubcategoryChange}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-              />
+                disabled={loadingSubcategories || !product.category}
+              >
+                <option value="">Select a subcategory</option>
+                {subcategories.map((subcategory) => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.subCategoryName}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

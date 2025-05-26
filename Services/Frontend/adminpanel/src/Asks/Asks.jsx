@@ -1,113 +1,94 @@
 import { useState, useEffect } from 'react'
-
-// Mock data - would be replaced with API calls
-const mockAsks = [
-  { 
-    id: 1, 
-    question: 'Are your bamboo toothbrushes biodegradable?', 
-    user: 'Sarah Johnson', 
-    email: 'sarah.j@example.com', 
-    date: '2023-04-15T14:32:00Z',
-    status: 'Pending',
-    product: 'Bamboo Toothbrush'
-  },
-  { 
-    id: 2, 
-    question: 'Is the packaging for the reusable water bottle recyclable?', 
-    user: 'Michael Chen', 
-    email: 'mchen@example.com', 
-    date: '2023-04-14T09:17:00Z',
-    status: 'Answered',
-    product: 'Reusable Water Bottle',
-    answer: 'Yes, our packaging is made from 100% recycled cardboard and is fully recyclable.'
-  },
-  { 
-    id: 3, 
-    question: 'How long does the solar charger take to fully charge?', 
-    user: 'Emma Wilson', 
-    email: 'emma.w@example.com', 
-    date: '2023-04-13T16:45:00Z',
-    status: 'Pending',
-    product: 'Solar Powered Charger'
-  },
-  { 
-    id: 4, 
-    question: 'Are the organic cotton sheets pre-shrunk?', 
-    user: 'David Brown', 
-    email: 'dbrown@example.com', 
-    date: '2023-04-12T11:23:00Z',
-    status: 'Answered',
-    product: 'Organic Cotton Sheets',
-    answer: 'Our organic cotton sheets are pre-shrunk and pre-washed, so they will maintain their size after washing.'
-  },
-  { 
-    id: 5, 
-    question: 'Is the recycled glass vase dishwasher safe?', 
-    user: 'Lisa Garcia', 
-    email: 'lgarcia@example.com', 
-    date: '2023-04-11T15:10:00Z',
-    status: 'Pending',
-    product: 'Recycled Glass Vase'
-  },
-  { 
-    id: 6, 
-    question: 'What materials are used in the compostable cutlery set?', 
-    user: 'John Smith', 
-    email: 'john.smith@example.com', 
-    date: '2023-04-10T13:40:00Z',
-    status: 'Answered',
-    product: 'Compostable Cutlery Set',
-    answer: 'Our compostable cutlery is made from corn starch and contains no plastic. It will fully decompose in a commercial composting facility within 180 days.'
-  },
-  { 
-    id: 7, 
-    question: 'How do I care for the beeswax food wraps?', 
-    user: 'Amanda Taylor', 
-    email: 'ataylor@example.com', 
-    date: '2023-04-09T10:15:00Z',
-    status: 'Pending',
-    product: 'Beeswax Food Wraps'
-  },
-]
+import api from '../api'
 
 export default function Asks() {
   const [asks, setAsks] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [answerText, setAnswerText] = useState('')
   const [answeringId, setAnsweringId] = useState(null)
+  const [updating, setUpdating] = useState(false)
 
-  // Simulate API call
   useEffect(() => {
-    setLoading(true)
-    setTimeout(() => {
-      setAsks(mockAsks)
-      setLoading(false)
-    }, 500)
+    fetchAsks()
   }, [])
+
+  const fetchAsks = async () => {
+    try {
+      setLoading(true)
+      const data = await api.askAdmin.getAll()
+      // Transform API response to match the expected structure
+      const formattedAsks = data.map(ask => ({
+        id: ask.id,
+        question: ask.question || 'No question provided',
+        user: ask.userName || 'Anonymous',
+        email: ask.userEmail || 'No email provided',
+        date: ask.createdAt || new Date().toISOString(),
+        // Treat empty strings, "string", or null/undefined as unanswered
+        status: ask.answer && ask.answer.trim() && ask.answer !== "string" ? 'Answered' : 'Pending',
+        product: ask.productName || 'General Question',
+        answer: ask.answer || '',
+        userId: ask.userId
+      }))
+      setAsks(formattedAsks)
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching asks:', err)
+      setError('Failed to load customer questions. Please try again later.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleAnswer = (id) => {
     setAnsweringId(id)
-    setAnswerText('')
+    // Pre-fill with existing answer if any
+    const ask = asks.find(a => a.id === id)
+    setAnswerText(ask?.answer || '')
   }
 
-  const submitAnswer = (id) => {
+  const submitAnswer = async (id) => {
     if (!answerText.trim()) return
     
-    setAsks(asks.map(ask => {
-      if (ask.id === id) {
-        return {
-          ...ask,
-          status: 'Answered',
-          answer: answerText
-        }
+    try {
+      setUpdating(true)
+      
+      // Get the original question to keep it intact
+      const askToUpdate = asks.find(ask => ask.id === id)
+      if (!askToUpdate) return
+      
+      // Update only the answer, keeping the original question
+      const updateData = {
+        id: id,
+        question: askToUpdate.question,  // Keep original question
+        answer: answerText,              // Update answer
+        userId: askToUpdate.userId       // Keep user ID reference
       }
-      return ask
-    }))
-    
-    setAnsweringId(null)
-    setAnswerText('')
+      
+      await api.askAdmin.update(id, updateData)
+      
+      // Update local state
+      setAsks(asks.map(ask => {
+        if (ask.id === id) {
+          return {
+            ...ask,
+            status: 'Answered',
+            answer: answerText
+          }
+        }
+        return ask
+      }))
+      
+      setAnsweringId(null)
+      setAnswerText('')
+    } catch (err) {
+      console.error('Error updating answer:', err)
+      alert('Failed to update answer. Please try again.')
+    } finally {
+      setUpdating(false)
+    }
   }
 
   const cancelAnswer = () => {
@@ -167,6 +148,22 @@ export default function Asks() {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-md bg-red-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="mt-2 text-sm text-red-700">{error}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-8">
           <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-cyan-500"></div>
@@ -194,49 +191,49 @@ export default function Asks() {
                     </p>
                   </div>
                   
-                  {ask.status === 'Answered' && (
-                    <div className="mt-4 rounded-md bg-gray-50 p-3">
-                      <p className="text-sm font-medium text-gray-700">Answer:</p>
-                      <p className="mt-1 text-sm text-gray-600">{ask.answer}</p>
-                    </div>
-                  )}
-
-                  {ask.status === 'Pending' && (
+                  {answeringId === ask.id ? (
                     <div className="mt-4">
-                      {answeringId === ask.id ? (
-                        <div>
-                          <textarea
-                            value={answerText}
-                            onChange={(e) => setAnswerText(e.target.value)}
-                            placeholder="Type your answer here..."
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-                            rows={3}
-                          />
-                          <div className="mt-3 flex justify-end space-x-2">
-                            <button
-                              onClick={cancelAnswer}
-                              className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => submitAnswer(ask.id)}
-                              disabled={!answerText.trim()}
-                              className="rounded bg-cyan-500 px-3 py-1 text-sm text-white hover:bg-cyan-600 disabled:opacity-50"
-                            >
-                              Submit
-                            </button>
-                          </div>
+                      <textarea
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                        placeholder="Type your answer here..."
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
+                        rows={3}
+                      />
+                      <div className="mt-3 flex justify-end space-x-2">
+                        <button
+                          onClick={cancelAnswer}
+                          className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => submitAnswer(ask.id)}
+                          disabled={!answerText.trim() || updating}
+                          className="rounded bg-cyan-500 px-3 py-1 text-sm text-white hover:bg-cyan-600 disabled:opacity-50"
+                        >
+                          {updating ? 'Saving...' : 'Submit'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {ask.answer && ask.answer.trim() && ask.answer !== "string" && (
+                        <div className="mt-4 rounded-md bg-gray-50 p-3">
+                          <p className="text-sm font-medium text-gray-700">Answer:</p>
+                          <p className="mt-1 text-sm text-gray-600">{ask.answer}</p>
                         </div>
-                      ) : (
+                      )}
+                      
+                      <div className="mt-4">
                         <button
                           onClick={() => handleAnswer(ask.id)}
                           className="rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-600"
                         >
-                          Answer Question
+                          {ask.status === 'Answered' ? 'Edit Answer' : 'Answer Question'}
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
