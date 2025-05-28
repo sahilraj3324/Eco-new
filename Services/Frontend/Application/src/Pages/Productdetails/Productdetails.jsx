@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import NewProductsSection from '../Homepage/NewProducts';
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [mainImage, setMainImage] = useState('');
   const [selectedSize, setSelectedSize] = useState(null);
@@ -36,12 +37,47 @@ const ProductDetail = () => {
       alert("Please select both size and color.");
       return;
     }
-    // Add to cart logic here
-    console.log("Added to cart:", {
+    const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+    const cartProduct = {
       id: product.id,
+      name: product.name,
+      price: product.price,
+      mainImage: mainImage,
       size: selectedSize,
-      color: selectedColor
-    });
+      color: selectedColor,
+      quantity: 1,
+    };
+    cartItems.push(cartProduct);
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    console.log('Added to cart:', cartProduct);
+    navigate('/cart');
+  };
+
+  const handleAddToWishlist = () => {
+    if (!selectedSize || !selectedColor) {
+      alert("Please select both size and color.");
+      return;
+    }
+    const wishlistItems = JSON.parse(localStorage.getItem('wishlistItems') || '[]');
+    const exists = wishlistItems.some(
+      item => item.id === product.id && item.size === selectedSize && item.color === selectedColor
+    );
+    if (exists) {
+      alert("This product is already in your wishlist.");
+      return;
+    }
+    const wishlistProduct = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      mainImage: mainImage,
+      size: selectedSize,
+      color: selectedColor,
+      quantity: 1,
+    };
+    wishlistItems.push(wishlistProduct);
+    localStorage.setItem('wishlistItems', JSON.stringify(wishlistItems));
+    navigate('/wishlist');
   };
 
   if (!product) return <p className="p-4">Loading...</p>;
@@ -120,7 +156,10 @@ const ProductDetail = () => {
           >
             Add To Cart
           </button>
-          <button className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-full text-sm font-semibold">
+          <button 
+            onClick={handleAddToWishlist}
+            className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-full text-sm font-semibold"
+          >
             Add To Wishlist
           </button>
         </div>

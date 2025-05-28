@@ -19,10 +19,7 @@ namespace Backend.Models
         public Product Product { get; set; }
 
         [Required]
-        public string Color { get; set; }
-
-        [Required]
-        public string Size { get; set; }
+        public Guid VariantId { get; set; }
 
         [Required]
         public int Quantity { get; set; }

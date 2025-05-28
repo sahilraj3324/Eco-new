@@ -5,6 +5,7 @@ import productImg from '../../assets/men shirts.png';
 import cartImg from '../../assets/cart.png';
 import logoImg from '../../assets/shop vector icon.png';
 import NewProductsSection from '../Homepage/NewProducts';
+import { BsCartCheck } from 'react-icons/bs';
 
 const MyOrders = () => {
   const [activeTab, setActiveTab] = useState('Active');

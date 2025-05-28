@@ -23,6 +23,23 @@ namespace Backend.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Configure decimal precision for price fields
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Price)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Order>()
+                .Property(o => o.UnitPrice)
+                .HasPrecision(18, 2);
+
+            // Configure SubAdmin Roles list conversion - commented out since Roles is now string
+            // modelBuilder.Entity<SubAdmin>()
+            //     .Property(s => s.Roles)
+            //     .HasConversion(
+            //         v => string.Join(";", v),
+            //         v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
+            //     );
+
             modelBuilder.Entity<ReviewRating>()
                 .Property(r => r.Images)
                 .HasConversion(

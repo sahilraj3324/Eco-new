@@ -158,6 +158,9 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
@@ -254,7 +257,11 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -333,6 +340,7 @@ namespace Backend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("SellerId")
@@ -485,7 +493,7 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Role")
+                    b.Property<string>("Roles")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

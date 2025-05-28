@@ -2,6 +2,7 @@
 using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Backend.Controllers
 {
@@ -24,18 +25,52 @@ namespace Backend.Controllers
             if (product == null)
                 return NotFound("Product not found");
 
-            if (product.Stock < order.Quantity)
-                return BadRequest("Insufficient stock");
+            // Validate that the variant exists within the product
+            if (!await IsValidVariant(order.ProductId, order.VariantId))
+            {
+                return BadRequest("Invalid variant for this product");
+            }
+
+            // Get variant details for pricing and stock validation
+            var variant = GetVariantDetails(product, order.VariantId);
+            if (variant == null)
+            {
+                return BadRequest("Variant details not found");
+            }
+
+            // Check variant stock instead of product stock
+            if (int.TryParse(variant.Stock, out int variantStock))
+            {
+                if (variantStock < order.Quantity)
+                    return BadRequest("Insufficient variant stock");
+            }
+            else
+            {
+                // Fallback to product stock if variant stock is not a valid number
+                if (product.Stock < order.Quantity)
+                    return BadRequest("Insufficient stock");
+            }
 
             // 🛠️ Fixes:
             order.Id = Guid.NewGuid(); // Always generate new Order ID
             order.Product = null;      // Prevent trying to insert Product again
             order.SellerId = product.SellerId;
-            order.UnitPrice = product.Price;
+            order.UnitPrice = variant.Price; // Use variant price instead of product price
             order.OrderDate = DateTime.UtcNow;
             order.Status = "Pending";
 
-            product.Stock -= order.Quantity;
+            // Update variant stock if it's a valid number
+            if (int.TryParse(variant.Stock, out variantStock))
+            {
+                variant.Stock = (variantStock - order.Quantity).ToString();
+                // Update the product's variants JSON
+                product.Variants = product.Variants; // This will trigger the setter to update VariantsJson
+            }
+            else
+            {
+                // Fallback to updating product stock
+                product.Stock -= order.Quantity;
+            }
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
@@ -50,9 +85,26 @@ namespace Backend.Controllers
                 .Include(o => o.Product)
                 .ToListAsync();
 
-            return Ok(orders);
-        }
+            // Enrich orders with variant details
+            var enrichedOrders = orders.Select(order => new
+            {
+                order.Id,
+                order.BuyerId,
+                order.ProductId,
+                order.VariantId,
+                order.Quantity,
+                order.UnitPrice,
+                order.SellerId,
+                order.Status,
+                order.OrderDate,
+                order.ProcessedAt,
+                order.ShippingAddress,
+                Product = order.Product,
+                Variant = GetVariantDetails(order.Product, order.VariantId)
+            }).ToList();
 
+            return Ok(enrichedOrders);
+        }
 
         // GET: api/Order/buyer/{buyerId}
         [HttpGet("buyer/{buyerId}")]
@@ -63,7 +115,25 @@ namespace Backend.Controllers
                 .Include(o => o.Product)
                 .ToListAsync();
 
-            return Ok(orders);
+            // Enrich orders with variant details
+            var enrichedOrders = orders.Select(order => new
+            {
+                order.Id,
+                order.BuyerId,
+                order.ProductId,
+                order.VariantId,
+                order.Quantity,
+                order.UnitPrice,
+                order.SellerId,
+                order.Status,
+                order.OrderDate,
+                order.ProcessedAt,
+                order.ShippingAddress,
+                Product = order.Product,
+                Variant = GetVariantDetails(order.Product, order.VariantId)
+            }).ToList();
+
+            return Ok(enrichedOrders);
         }
 
         // GET: api/Order/seller/{sellerId}
@@ -75,7 +145,25 @@ namespace Backend.Controllers
                 .Include(o => o.Product)
                 .ToListAsync();
 
-            return Ok(orders);
+            // Enrich orders with variant details
+            var enrichedOrders = orders.Select(order => new
+            {
+                order.Id,
+                order.BuyerId,
+                order.ProductId,
+                order.VariantId,
+                order.Quantity,
+                order.UnitPrice,
+                order.SellerId,
+                order.Status,
+                order.OrderDate,
+                order.ProcessedAt,
+                order.ShippingAddress,
+                Product = order.Product,
+                Variant = GetVariantDetails(order.Product, order.VariantId)
+            }).ToList();
+
+            return Ok(enrichedOrders);
         }
 
         [HttpPut("{id}/status")]
@@ -113,6 +201,7 @@ namespace Backend.Controllers
 
             return Ok("All orders for the seller have been deleted.");
         }
+
         [HttpDelete("all")]
         public async Task<IActionResult> DeleteAllOrders()
         {
@@ -125,6 +214,53 @@ namespace Backend.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("All orders have been deleted.");
+        }
+
+        // Helper method to validate if variant exists within a product
+        private async Task<bool> IsValidVariant(Guid productId, Guid variantId)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) return false;
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(product.VariantsJson))
+                    return false;
+
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                var variants = JsonSerializer.Deserialize<List<ProductVariant>>(product.VariantsJson, options);
+                
+                return variants?.Any(v => v.Id == variantId) ?? false;
+            }
+            catch
+            {
+                return false; // If JSON is corrupted, consider variant invalid
+            }
+        }
+
+        // Helper method to get variant details
+        private ProductVariant GetVariantDetails(Product product, Guid variantId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(product.VariantsJson))
+                    return null;
+
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                var variants = JsonSerializer.Deserialize<List<ProductVariant>>(product.VariantsJson, options);
+                
+                return variants?.FirstOrDefault(v => v.Id == variantId);
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
