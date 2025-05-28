@@ -1,11 +1,56 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, Home } from 'lucide-react';
 
 const OrderSuccessPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { orderId } = location.state || {};
+  const { orderId, productId, variantId, quantity } = location.state || {};
+
+  useEffect(() => {
+    const updateStock = async () => {
+      if (!productId || !variantId || !quantity) return;
+      try {
+        // Fetch the product to get the current stock of the variant
+        const res = await fetch(`/api/Product/${productId}`);
+        if (!res.ok) throw new Error('Failed to fetch product');
+        const product = await res.json();
+        const variant = (product.variants || []).find(
+          v => (v.id || v.Id) === variantId
+        );
+        if (!variant) throw new Error('Variant not found in product');
+        const currentStock = parseInt(variant.stock || variant.Stock || 0, 10);
+        const newStock = currentStock - quantity;
+
+        // Update the variant stock with the new stock value
+        try {
+          const stockRes = await fetch(`/api/Product/update-variant-stock/${productId}/${variantId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newStock: newStock })
+          });
+          if (!stockRes.ok) throw new Error('Stock update failed');
+        } catch (err) {
+          // If stock update fails, try to add the quantity back
+          try {
+            const addBackStock = currentStock; // revert to original stock
+            await fetch(`/api/Product/update-variant-stock/${productId}/${variantId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ newStock: addBackStock })
+            });
+          } catch (addBackErr) {
+            console.error('Failed to add back to stock after stock update failure:', addBackErr);
+          }
+          alert('Order placed, but failed to update stock. Please contact support.');
+        }
+      } catch (err) {
+        console.error('Error updating stock after order:', err);
+      }
+    };
+
+    updateStock();
+  }, [productId, variantId, quantity]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">

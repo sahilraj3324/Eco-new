@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+const getVariantForOrder = (order) => {
+  if (!order.product || !order.variantId) return null;
+  return (order.product.variants || []).find(
+    v => (v.id || v.Id) === order.variantId
+  );
+};
+
 const Allorder = () => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
@@ -55,8 +62,8 @@ const Allorder = () => {
     setFilteredOrders(filtered);
   }, [searchQuery, statusFilter, orders]);
 
-  const handleProductClick = (id) => {
-    navigate(`/product/${id}`);
+  const handleOrderClick = (order) => {
+    navigate(`/order/${order.id}`, { state: { order } });
   };
 
   return (
@@ -64,24 +71,6 @@ const Allorder = () => {
       <h1 className="text-2xl font-bold mb-4">All Orders</h1>
 
       <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-4 gap-2">
-        <input
-          type="text"
-          placeholder="Search by product name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="border p-2 rounded w-full md:w-1/2"
-        />
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border p-2 rounded w-full md:w-1/4"
-        >
-          <option value="">All Statuses</option>
-          <option value="Pending">Pending</option>
-          <option value="Shipped">Shipped</option>
-          <option value="Delivered">Delivered</option>
-        </select>
       </div>
 
       {loading ? (
@@ -92,29 +81,41 @@ const Allorder = () => {
         <p className="text-gray-500">No matching orders found.</p>
       ) : (
         <ul className="space-y-4">
-          {filteredOrders.map((order) => (
-            <li
-              key={order.id}
-              className="p-4 bg-white rounded-lg shadow hover:bg-gray-50 cursor-pointer flex items-center"
-              onClick={() => handleProductClick(order.product.id)}
-            >
-              <img
-                src={order.product.mainImage || "/placeholder.png"}
-                alt={order.product.name}
-                onError={(e) => (e.target.src = "/placeholder.png")}
-                className="w-20 h-20 object-cover rounded border"
-              />
-              <div className="ml-4 flex-1">
-                <p className="text-lg font-semibold">{order.product.name}</p>
-                <p className="text-sm text-gray-600 capitalize">Status: {order.status}</p>
-                <p className="text-sm text-gray-700 mt-1">₹{order.unitPrice}</p>
-                <p className="text-sm text-gray-700 mt-1">Quantity: {order.quantity}</p>
-              </div>
-              <div className="text-sm text-gray-500">
-                Order ID: {order.id.slice(0, 6)}...
-              </div>
-            </li>
-          ))}
+          {filteredOrders.map((order) => {
+            const variant = getVariantForOrder(order);
+            const price = (variant?.price || variant?.Price || order.unitPrice || order.product?.price || 0);
+            return (
+              <li
+                key={order.id}
+                className="p-4 bg-white rounded-lg shadow hover:bg-gray-50 cursor-pointer flex items-center"
+                onClick={() => handleOrderClick(order)}
+              >
+                <img
+                  src={order.product.mainImage || "/placeholder.png"}
+                  alt={order.product.name}
+                  onError={(e) => (e.target.src = "/placeholder.png")}
+                  className="w-20 h-20 object-cover rounded border"
+                />
+                <div className="ml-4 flex-1">
+                  <p className="text-lg font-semibold">{order.product.name}</p>
+                  {variant && (
+                    <div className="text-lg text-gray-500 mt-1">
+                      Color: <span className="font-semibold">{variant.color || variant.Color}</span>
+                      {(variant.size || variant.Size) ? (
+                        <> | Size: <span className="font-semibold">{variant.size || variant.Size}</span></>
+                      ) : null}
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-600 capitalize">Status: {order.status}</p>
+                  <p className="text-sm text-gray-700 mt-1">₹{price}</p>
+                  <p className="text-sm text-gray-700 mt-1">Quantity: {order.quantity}</p>
+                </div>
+                <div className="text-sm text-gray-500">
+                  Order ID: {order.id.slice(0, 6)}...
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

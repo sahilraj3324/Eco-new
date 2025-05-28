@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import fallbackImage from './shirtimage.png';
 
-const NewProducts = () => {
+const Top = () => {
   const scrollRef = useRef();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ const NewProducts = () => {
 
   return (
     <section className="px-4 py-8 relative">
-      <h2 className="text-2xl font-semibold mb-6 text-center">New Products</h2>
+      <h2 className="text-2xl font-semibold mb-6 text-center">Top</h2>
 
       <div className="relative">
         <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow rounded-full p-2 hover:bg-gray-100">
@@ -48,7 +48,8 @@ const NewProducts = () => {
             <p className="text-center w-full">Loading...</p>
           ) : (
             products
-            .filter((product) => product.status === "In Review" || product.status === "pending")
+            
+            .filter((product)=> product.top === "true")
             .map((product, index) => (
               <Link
                 key={product.id || index}
@@ -56,8 +57,8 @@ const NewProducts = () => {
                 className="min-w-[220px] w-56 flex-shrink-0 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group border border-gray-100 hover:border-blue-200"
               >
                 <div className="relative overflow-hidden">
-                  <span className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium px-3 py-1 rounded-full shadow-lg z-10">
-                    New
+                  <span className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-medium px-3 py-1 rounded-full shadow-lg z-10">
+                    Top
                   </span>
                   <img
                     src={product.mainImage || fallbackImage}
@@ -100,4 +101,4 @@ const NewProducts = () => {
   );
 };
 
-export default NewProducts;
+export default Top;

@@ -112,27 +112,13 @@ const Navbar = () => {
               <Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
                 <User size={16} /> My Profile
               </Link>
-              <Link to="/supercoin" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
-                <Bolt size={16} /> SuperCoin Zone
-              </Link>
-              <Link to="/plus" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
-                <BadgePercent size={16} /> Flipkart Plus Zone
-              </Link>
-              <Link to="/orders" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
+              <Link to="/retailerOrder" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
                 <Package size={16} /> Orders
               </Link>
               <Link to="/wishlist" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
                 <Heart size={16} /> Wishlist
               </Link>
-              <Link to="/coupons" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
-                <Ticket size={16} /> Coupons
-              </Link>
-              <Link to="/gifts" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
-                <Gift size={16} /> Gift Cards
-              </Link>
-              <Link to="/notifications" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
-                <Bell size={16} /> Notifications
-              </Link>
+             
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
