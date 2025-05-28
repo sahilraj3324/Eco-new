@@ -59,7 +59,9 @@ export default function Retailers() {
   }, [])
 
   const toggleRetailerStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'Active' ? 'Blocked' : 'Active'
+    // Handle null/undefined status by defaulting to Active, then toggle
+    const actualCurrentStatus = currentStatus || 'Active'
+    const newStatus = actualCurrentStatus === 'Active' ? 'Blocked' : 'Active'
     
     try {
       // Update status in the backend
@@ -88,7 +90,8 @@ export default function Retailers() {
   })
 
   const getStatusBadgeClass = (status) => {
-    return status === 'Active' 
+    const actualStatus = status || 'Active' // Default to Active if null/undefined
+    return actualStatus === 'Active' 
       ? 'bg-green-100 text-green-800'
       : 'bg-red-100 text-red-800'
   }
@@ -167,9 +170,9 @@ export default function Retailers() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Address
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Actions
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -196,14 +199,14 @@ export default function Retailers() {
                       <div className="text-xs text-gray-400">PIN: {retailer.pincode}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm">
-                      <button
+                      {/* <button
                         onClick={() => toggleRetailerStatus(retailer.id, retailer.status)}
                         className={`rounded px-3 py-1 text-xs font-medium text-white ${
-                          retailer.status === 'Active' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
+                          (retailer.status || 'Active') === 'Active' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
                         }`}
                       >
-                        {retailer.status === 'Active' ? 'Block' : 'Unblock'}
-                      </button>
+                        {(retailer.status || 'Active') === 'Active' ? 'Block' : 'Unblock'}
+                      </button> */}
                     </td>
                   </tr>
                 ))

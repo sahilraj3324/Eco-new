@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../../Vendor/src/Firebase/firebase';
 
 export default function EditVendor() {
   const { id } = useParams();
@@ -12,13 +14,18 @@ export default function EditVendor() {
     address: '',
     gstNumber: '',
     pincode: '',
+    hnscode: '',
     profile_picture: '',
-    // hnscode is not in the provided Seller.cs model, omitting for now
+    password: '',
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
 
   useEffect(() => {
     const fetchVendorData = async () => {
@@ -33,12 +40,15 @@ export default function EditVendor() {
           // Convert numeric fields to strings for form inputs
           phoneNumber: data.phoneNumber?.toString() || '',
           pincode: data.pincode?.toString() || '',
+          hnscode: data.hnscode?.toString() || '',
           // Ensure other fields have fallbacks
           storename: data.storename || '',
           email: data.email || data.Email || '', // Handle possible casing differences
           address: data.address || data.Address || '',
           gstNumber: data.gstNumber || data.GstNumber || '',
-          profile_picture: data.profile_picture || ''
+          profile_picture: data.profile_picture || '',
+          password: '',
+          confirmPassword: ''
         });
         
         setError(null);
@@ -52,11 +62,79 @@ export default function EditVendor() {
     fetchVendorData();
   }, [id]);
 
+  const uploadToFirebase = (file) => {
+    return new Promise((resolve, reject) => {
+      const imageRef = ref(storage, `profile-pictures/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(imageRef, file);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setImageUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Upload error:', error);
+          reject(error);
+        },
+        async () => {
+          try {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(url);
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
+    });
+  };
+
+  const handleProfileImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file.');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size should be less than 5MB.');
+        return;
+      }
+      
+      setProfileImageFile(file);
+      setError(null);
+    }
+  };
+
+  const uploadProfileImage = async () => {
+    if (!profileImageFile) return;
+
+    try {
+      setImageUploading(true);
+      setImageUploadProgress(0);
+      const imageUrl = await uploadToFirebase(profileImageFile);
+      
+      setVendor(prev => ({ ...prev, profile_picture: imageUrl }));
+      setProfileImageFile(null);
+      setSuccessMessage('Profile picture uploaded successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError('Failed to upload image. Please try again.');
+    } finally {
+      setImageUploading(false);
+      setImageUploadProgress(0);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
     // Special handling for numeric fields
-    if (name === 'phoneNumber' || name === 'pincode') {
+    if (name === 'phoneNumber' || name === 'pincode' || name === 'hnscode') {
       // Allow only digits in these fields
       const numericValue = value.replace(/\D/g, '');
       setVendor(prev => ({ ...prev, [name]: numericValue }));
@@ -70,27 +148,37 @@ export default function EditVendor() {
     setUpdating(true);
     setError(null);
     setSuccessMessage('');
+    
     try {
-      // Format the payload to match backend expectations exactly
-      // Note: matching the casing from Seller.cs model
+      // Validate password if provided
+      if (vendor.password && vendor.password !== vendor.confirmPassword) {
+        setError('Passwords do not match. Please check and try again.');
+        setUpdating(false);
+        return;
+      }
+
+      if (vendor.password && vendor.password.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        setUpdating(false);
+        return;
+      }
+
+      // Format the payload to match backend expectations for updateAllFields endpoint
       const payload = {
-        Id: id,
-        storename: vendor.storename, // lowercase as in the model
-        Email: vendor.email, // uppercase E as in the model
-        PhoneNumber: parseInt(vendor.phoneNumber) || 0, // Convert to number
+        storename: vendor.storename,
+        Email: vendor.email,
+        PhoneNumber: parseInt(vendor.phoneNumber) || null,
         Address: vendor.address,
         GstNumber: vendor.gstNumber,
-        pincode: parseInt(vendor.pincode) || 0, // Convert to number
+        pincode: parseInt(vendor.pincode) || null,
         profile_picture: vendor.profile_picture,
-        // Keep any other fields that might be in the original vendor object
-        ...vendor,
-        // But override with our formatted values
-        id: id // Include both Id and id to be safe
+        hnscode: vendor.hnscode || null,
+        Password: vendor.password || null // Only include password if provided
       };
       
-      console.log('Sending payload to API:', payload);
+      console.log('Sending payload to updateAllFields API:', payload);
       
-      const response = await api.seller.update(id, payload);
+      const response = await api.seller.updateAllFields(id, payload);
       console.log('API response:', response);
       
       setSuccessMessage('Vendor details updated successfully!');
@@ -129,6 +217,98 @@ export default function EditVendor() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Profile Picture Section - Moved to Top */}
+          <div className="bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Profile Picture</h3>
+            
+            {/* Current Profile Picture Display */}
+            <div className="flex flex-col items-center mb-4">
+              {vendor.profile_picture ? (
+                <img 
+                  src={vendor.profile_picture} 
+                  alt="Current Profile" 
+                  className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-white shadow-lg">
+                  <span className="text-gray-500 text-sm">No Image</span>
+                </div>
+              )}
+            </div>
+
+            {/* Upload New Image Section */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload New Profile Picture
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfileImageUpload}
+                  className="w-full p-3 rounded-lg bg-white border border-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100"
+                />
+                <p className="text-xs text-gray-500 mt-1">Max file size: 5MB. Supported formats: JPG, PNG, GIF</p>
+              </div>
+
+              {/* File Upload Preview and Progress */}
+              {profileImageFile && (
+                <div className="bg-white rounded-lg p-4 border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-700">Selected: {profileImageFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setProfileImageFile(null)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  
+                  {imageUploading && (
+                    <div className="mb-2">
+                      <div className="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Uploading...</span>
+                        <span>{Math.round(imageUploadProgress)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-cyan-500 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${imageUploadProgress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <button
+                    type="button"
+                    onClick={uploadProfileImage}
+                    disabled={imageUploading}
+                    className="w-full bg-cyan-500 text-white py-2 px-4 rounded-lg hover:bg-cyan-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {imageUploading ? 'Uploading...' : 'Upload to Firebase'}
+                  </button>
+                </div>
+              )}
+
+              {/* Manual URL Input - Alternative Option */}
+              <div className="border-t pt-4">
+                <label htmlFor="profile_picture_url" className="block text-sm font-medium text-gray-700 mb-2">
+                  Or Enter Image URL Manually
+                </label>
+                <input
+                  type="url"
+                  name="profile_picture"
+                  id="profile_picture_url"
+                  value={vendor.profile_picture || ''}
+                  onChange={handleInputChange}
+                  className="w-full p-3 rounded-lg bg-white border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
+                  placeholder="https://example.com/image.png"
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label htmlFor="storename" className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
             <input
@@ -153,6 +333,40 @@ export default function EditVendor() {
               className="p-3 rounded-lg bg-gray-50 w-full border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                New Password <span className="text-sm text-gray-500">(leave blank to keep current)</span>
+              </label>
+              <input
+                type="password"
+                name="password"
+                id="password"
+                value={vendor.password || ''}
+                onChange={handleInputChange}
+                className="p-3 rounded-lg bg-gray-50 w-full border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
+                placeholder="Enter new password"
+                minLength="6"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                id="confirmPassword"
+                value={vendor.confirmPassword || ''}
+                onChange={handleInputChange}
+                className="p-3 rounded-lg bg-gray-50 w-full border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
+                placeholder="Confirm new password"
+                minLength="6"
+              />
+            </div>
           </div>
 
           <div>
@@ -204,19 +418,16 @@ export default function EditVendor() {
           </div>
 
           <div>
-            <label htmlFor="profile_picture" className="block text-sm font-medium text-gray-700 mb-1">Profile Picture URL</label>
+            <label htmlFor="hnscode" className="block text-sm font-medium text-gray-700 mb-1">HSN Code</label>
             <input
-              type="url"
-              name="profile_picture"
-              id="profile_picture"
-              value={vendor.profile_picture || ''}
+              type="text"
+              name="hnscode"
+              id="hnscode"
+              value={vendor.hnscode || ''}
               onChange={handleInputChange}
               className="p-3 rounded-lg bg-gray-50 w-full border border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-              placeholder="https://example.com/image.png"
+              placeholder="Enter HSN Code"
             />
-            {vendor.profile_picture && (
-                <img src={vendor.profile_picture} alt="Profile Preview" className="mt-2 rounded-md h-32 w-32 object-cover" />
-            )}
           </div>
           
           <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4">

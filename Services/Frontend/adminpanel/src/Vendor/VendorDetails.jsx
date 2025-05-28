@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
 import api from '../api'
 
 export default function VendorDetails() {
@@ -22,8 +21,8 @@ export default function VendorDetails() {
   const fetchVendorDetails = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`/api/Seller/get/${id}`)
-      setVendor(response.data)
+      const data = await api.seller.getById(id)
+      setVendor(data)
       setError(null)
     } catch (err) {
       setError('Failed to fetch vendor details. Please try again later.')
@@ -122,7 +121,7 @@ export default function VendorDetails() {
         </div>
         <div class="flex gap-2">
           <button
-            onClick={() => navigate(`/vendors/edit/${id}`)}
+            onClick={() => navigate(`/vendors/${id}/edit`)}
             className="rounded-md bg-cyan-500 px-4 py-2 text-white hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
           >
             Edit Vendor
@@ -253,7 +252,7 @@ export default function VendorDetails() {
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-800">Vendor Products</h2>
           <button
-            onClick={() => navigate(`/products/add/${id}`)}
+            onClick={() => navigate(`/vendors/${id}/add-product`)}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="-ml-1 mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

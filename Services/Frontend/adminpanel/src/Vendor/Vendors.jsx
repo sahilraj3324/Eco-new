@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import api from '../api'
 
 export default function Vendors() {
   const [vendors, setVendors] = useState([])
@@ -17,9 +17,9 @@ export default function Vendors() {
   const fetchVendors = async () => {
     try {
       setLoading(true)
-      const response = await axios.get('/api/Seller/get-all')
-      setVendors(response.data)
-      console.log(response.data)
+      const data = await api.seller.getAll()
+      setVendors(data)
+      console.log(data)
       setError(null)
     } catch (err) {
       setError('Failed to fetch vendors. Please try again later.')

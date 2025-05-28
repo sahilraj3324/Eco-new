@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { storage } from '../../../Vendor/src/Firebase/firebase'
+import { storage } from '../../../Firebase/firebase'
 import { v4 as uuidv4 } from 'uuid'
 
 export default function EditProduct() {
@@ -380,7 +380,7 @@ export default function EditProduct() {
       
       // Navigate back to products list after a short delay
       setTimeout(() => {
-        navigate('/products')
+        navigate(-1)
       }, 2000)
     } catch (err) {
       console.error('Error updating product:', err)
@@ -433,32 +433,15 @@ export default function EditProduct() {
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-700">Edit Product</h1>
             <button
-              onClick={() => navigate('/products')}
+              onClick={() => navigate(-1)}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
             >
-              Back to Products
+              Back
             </button>
           </div>
 
           {/* Top and Trending Buttons */}
-          <div className="flex justify-end space-x-4 mb-6">
-            <button
-              type="button"
-              onClick={() => toggleProductField('top')}
-              disabled={saving}
-              className="inline-flex items-center rounded-md border border-transparent bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-            >
-              {product.top === 'true' ? 'Unmark as Top' : 'Mark as Top'}
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleProductField('trending')}
-              disabled={saving}
-              className="inline-flex items-center rounded-md border border-transparent bg-purple-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-            >
-              {product.trending === 'true' ? 'Unmark as Trending' : 'Mark as Trending'}
-            </button>
-          </div>
+          
 
           {/* Messages */}
           {error && (
@@ -964,7 +947,7 @@ export default function EditProduct() {
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
-                onClick={() => navigate('/products')}
+                onClick={() => navigate(-1)}
                 className="inline-flex items-center rounded-md border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
               >
                 Cancel

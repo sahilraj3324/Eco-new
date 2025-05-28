@@ -14,6 +14,7 @@ import AddProduct from '../ProductPost/AddProduct';
 
 import VendorProducts from '../Inventory/VendorProducts';
 import VendorOrders from '../Order/VendorOrders';
+import AskAdmin from '../Ask/AskAdmin';
 import {
   Home,
   PlusCircle,
@@ -21,6 +22,7 @@ import {
   ShoppingBag,
   CreditCard,
   User,
+  HelpCircle,
 } from 'lucide-react'; 
 
 
@@ -28,6 +30,7 @@ const VendorDashboard = () => {
   const [activeSection, setActiveSection] = useState('Home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [name, setName] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,12 +45,38 @@ const VendorDashboard = () => {
     setName(storename);
   }, [navigate]);
 
+  const handleLogout = () => {
+    // Clear all localStorage data
+    localStorage.removeItem('Id');
+    localStorage.removeItem('storename');
+    localStorage.removeItem('username');
+    localStorage.removeItem('Status');
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    localStorage.removeItem('phone');
+    
+    // Clear any other vendor-related data
+    localStorage.clear();
+    
+    // Redirect to login page
+    navigate('/');
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
   const sections = [
     { name: 'Home', icon: <Home size={18} />, component: <SellerHome /> },
     { name: 'Add Your Products', icon: <PlusCircle size={18} />, component: <AddProduct /> },
     { name: 'Inventory', icon: <Boxes size={18} />, component: <VendorProducts /> },
     { name: 'Orders ', icon: <ShoppingBag size={18} />, component: <VendorOrders /> },
     { name: 'Payment Page', icon: <CreditCard size={18} />, component: <PaymentsPage /> },
+    { name: 'Ask Admin', icon: <HelpCircle size={18} />, component: <AskAdmin /> },
     { name: 'Your Profile', icon: <User size={18} />, component: <Profile /> },
   ];
 
@@ -114,7 +143,10 @@ const VendorDashboard = () => {
               🏪
               <span className="font-medium">{name}</span>
             </div>
-            <button className="bg-gray-400 text-white px-3 py-1 rounded">Logout</button>
+            <button className="bg-cyan-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-full transition-colors flex items-center space-x-2" onClick={confirmLogout}>
+             
+              <span>Logout</span>
+            </button>
           </div>
         </div>
 
@@ -127,6 +159,35 @@ const VendorDashboard = () => {
           © 2025 Your Company. All rights reserved.
         </footer>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="text-center">
+              <div className="text-red-500 text-5xl mb-4">🚪</div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Confirm Logout</h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to logout? You'll need to login again to access your dashboard.
+              </p>
+              <div className="flex space-x-3 justify-center">
+                <button
+                  onClick={cancelLogout}
+                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                >
+                  Yes, Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

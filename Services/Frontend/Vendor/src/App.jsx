@@ -6,6 +6,7 @@ import VendorDashboard from './Pages/Vendor/Dashboard/VendorDashboard';
 import VendorSignUp from './Pages/Auth/SignUp/VendorSignUp';
 import VendorLogin from './Pages/Auth/Login/VendorLogin';
 import ProductDetails from './Pages/Vendor/Inventory/ProductDetails';
+import EditProduct from './Pages/Vendor/Inventory/Editproduct';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={< VendorLogin/>} />
         <Route path="/vendordashboard" element={< VendorDashboard/>} />
         <Route path="/product/:id" element={< ProductDetails/>} />
+        <Route path="/edit-product/:id" element={< EditProduct/>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
     </Router>

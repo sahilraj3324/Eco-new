@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import api from "../api";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -14,6 +15,8 @@ const ProductDetails = () => {
   const [editingVariant, setEditingVariant] = useState(null);
   const [tempValues, setTempValues] = useState({});
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -149,6 +152,24 @@ const ProductDetails = () => {
       ...tempValues,
       [`${variantId}_${field}`]: value
     });
+  };
+
+  const handleDeleteProduct = async () => {
+    setDeleteLoading(true);
+    try {
+      await axios.delete(`/api/Product/delete/${id}`);
+      navigate(-1);
+    } catch (err) {
+      console.error("Error deleting product:", err);
+      alert("Failed to delete product. Please try again.");
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleEditProduct = () => {
+    navigate(`/edit-product/${id}`);
   };
 
   if (loading) {
@@ -556,21 +577,65 @@ const ProductDetails = () => {
         <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Actions</h3>
           <div className="flex flex-wrap gap-3">
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+            <button
+              onClick={handleEditProduct}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            >
               <span>✏️</span>
               <span>Edit Product</span>
             </button>
-            <button className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2">
-              <span>📋</span>
-              <span>Duplicate</span>
-            </button>
-            <button className="px-6 py-3 border-2 border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center space-x-2">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="px-6 py-3 border-2 border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center space-x-2"
+            >
               <span>🗑️</span>
               <span>Delete</span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+            <div className="text-center">
+              <div className="text-red-500 text-5xl mb-4">⚠️</div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Delete Product</h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete "<strong>{product.name}</strong>"? 
+                This action cannot be undone and will permanently remove the product from your inventory.
+              </p>
+              <div className="flex space-x-3 justify-center">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleteLoading}
+                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteProduct}
+                  disabled={deleteLoading}
+                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-2"
+                >
+                  {deleteLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🗑️</span>
+                      <span>Delete Product</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
