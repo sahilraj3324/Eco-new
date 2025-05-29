@@ -38,7 +38,8 @@ const BulkUpload = () => {
               color: color?.trim() || "",
               weight: weight?.trim() || "",
               stock: stock?.trim() || "",
-              price: Number(price) || 0
+              price: Number(price) || 0,
+              stock2: stock?.trim() || ""
             };
           });
 
@@ -72,7 +73,8 @@ const BulkUpload = () => {
             shipsIn: item.shipsIn?.trim() || "",
             mainImage: "",
             top: "false",
-            trending: "false"
+            trending: "false",
+            minOrderQuantity: item.minOrderQuantity?.trim() || ""
           };
         });
 

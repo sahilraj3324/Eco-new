@@ -51,6 +51,26 @@ export default function CategoryPage() {
     }
   };
 
+  const handleDeleteCategory = async (categoryId, categoryName) => {
+    if (!window.confirm(`Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.category.delete(categoryId);
+      setSuccessMessage('Category deleted successfully!');
+      fetchCategories(); // Refresh the list
+      setError(null);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(`Failed to delete category: ${err.message || 'Unknown error'}`);
+      setSuccessMessage('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading && categories.length === 0) { // Show main loading only on initial load
     return (
       <div className="flex justify-center py-12">
@@ -157,14 +177,24 @@ export default function CategoryPage() {
                       {category.id}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                      <Link
-                        to={`/categories/${category.id}/subcategories`}
-                        className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1"
-                      >
-                        <EyeIcon className="h-5 w-5 mr-2 text-gray-500" />
-                        View Subcategories
-                      </Link>
-                      {/* Future actions like Edit/Delete category can be added here */}
+                      <div className="flex justify-end space-x-2">
+                        <Link
+                          to={`/categories/${category.id}/subcategories`}
+                          className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1"
+                        >
+                          <EyeIcon className="h-5 w-5 mr-2 text-gray-500" />
+                          View Subcategories
+                        </Link>
+                        <button
+                          onClick={() => handleDeleteCategory(category.id, category.categoryName)}
+                          className="inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                        >
+                          <svg className="h-5 w-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

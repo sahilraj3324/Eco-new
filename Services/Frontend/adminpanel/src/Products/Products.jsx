@@ -166,7 +166,7 @@ export default function Products() {
                     <span className="font-medium">Brand:</span> {product.brand || 'N/A'}
                   </div>
                   <div>
-                    <span className="font-medium">Price:</span> ${parseFloat(product.price || 0).toFixed(2)}
+                    <span className="font-medium">Price:</span> {parseFloat(product.price || 0).toFixed(2)}
                   </div>
                   <div>
                     <span className="font-medium">Stock:</span> {product.stock || 0}
@@ -278,7 +278,7 @@ export default function Products() {
                       <div className="text-xs text-gray-500">{product.material || ''}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <div className="text-sm text-gray-900">${parseFloat(product.price || 0).toFixed(2)}</div>
+                      <div className="text-sm text-gray-900">₹{parseFloat(product.price || 0).toFixed(2)}</div>
                       <div className="text-xs text-gray-500">GST: {product.gst || 'N/A'}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">

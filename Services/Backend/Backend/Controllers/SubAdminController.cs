@@ -23,91 +23,39 @@ namespace Backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllSubAdmins()
-        {
-            var subAdmins = await _context.SubAdmins.ToListAsync();
-            // Convert to API format with RolesList
-            var result = subAdmins.Select(s => new
-            {
-                s.Id,
-                s.Name,
-                s.Email,
-                s.Phone,
-                Roles = s.RolesList
-            }).ToList();
-            return Ok(result);
-        }
+        public async Task<IActionResult> GetAllSubAdmins() =>
+            Ok(await _context.SubAdmins.ToListAsync());
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSubAdminById(Guid id)
         {
             var subAdmin = await _context.SubAdmins.FindAsync(id);
-            if (subAdmin == null) return NotFound();
-            
-            // Convert to API format with RolesList
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                Roles = subAdmin.RolesList
-            };
-            return Ok(result);
+            return subAdmin == null ? NotFound() : Ok(subAdmin);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateSubAdmin([FromBody] SubAdminCreateRequest request)
+        public async Task<IActionResult> CreateSubAdmin([FromBody] SubAdmin subAdmin)
         {
-            var subAdmin = new SubAdmin
-            {
-                Id = Guid.NewGuid(),
-                Name = request.Name,
-                Email = request.Email,
-                Phone = request.Phone,
-                Password = request.Password,
-                RolesList = request.Roles ?? new List<string>()
-            };
-            
+            subAdmin.Id = Guid.NewGuid();
             _context.SubAdmins.Add(subAdmin);
             await _context.SaveChangesAsync();
-            
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                Roles = subAdmin.RolesList
-            };
-            return Ok(result);
+            return Ok(subAdmin);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSubAdmin(Guid id, [FromBody] SubAdminCreateRequest request)
+        public async Task<IActionResult> UpdateSubAdmin(Guid id, [FromBody] SubAdmin updated)
         {
             var subAdmin = await _context.SubAdmins.FindAsync(id);
             if (subAdmin == null) return NotFound();
 
-            subAdmin.Name = request.Name;
-            subAdmin.Email = request.Email;
-            subAdmin.Phone = request.Phone;
-            subAdmin.Password = request.Password;
-            subAdmin.RolesList = request.Roles ?? new List<string>();
+            subAdmin.Name = updated.Name;
+            subAdmin.Email = updated.Email;
+            subAdmin.Phone = updated.Phone;
+            subAdmin.Password = updated.Password;
+            subAdmin.Roles = updated.Roles;
 
             await _context.SaveChangesAsync();
-            
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                Roles = subAdmin.RolesList
-            };
-            return Ok(result);
+            return Ok(subAdmin);
         }
 
         [HttpDelete("{id}")]
@@ -141,7 +89,7 @@ namespace Backend.Controllers
                     subAdmin.Name,
                     subAdmin.Email,
                     subAdmin.Phone,
-                    Roles = subAdmin.RolesList
+                    subAdmin.Roles
                 }
             });
         }
@@ -155,24 +103,13 @@ namespace Backend.Controllers
             if (string.IsNullOrWhiteSpace(role))
                 return BadRequest("Role cannot be empty");
 
-            var currentRoles = subAdmin.RolesList;
-            if (!currentRoles.Contains(role))
+            if (!subAdmin.Roles.Contains(role))
             {
-                currentRoles.Add(role);
-                subAdmin.RolesList = currentRoles;
+                subAdmin.Roles.Add(role);
                 await _context.SaveChangesAsync();
             }
 
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                Roles = subAdmin.RolesList
-            };
-            return Ok(result);
+            return Ok(subAdmin);
         }
 
         [HttpDelete("{id}/roles/{role}")]
@@ -181,24 +118,13 @@ namespace Backend.Controllers
             var subAdmin = await _context.SubAdmins.FindAsync(id);
             if (subAdmin == null) return NotFound();
 
-            var currentRoles = subAdmin.RolesList;
-            if (currentRoles.Contains(role))
+            if (subAdmin.Roles.Contains(role))
             {
-                currentRoles.Remove(role);
-                subAdmin.RolesList = currentRoles;
+                subAdmin.Roles.Remove(role);
                 await _context.SaveChangesAsync();
             }
 
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                Roles = subAdmin.RolesList
-            };
-            return Ok(result);
+            return Ok(subAdmin);
         }
 
         private string GenerateJwtToken(string userId)
@@ -214,15 +140,5 @@ namespace Backend.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
-    }
-
-    // DTO for SubAdmin creation/update
-    public class SubAdminCreateRequest
-    {
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string Phone { get; set; }
-        public string Password { get; set; }
-        public List<string> Roles { get; set; }
     }
 }

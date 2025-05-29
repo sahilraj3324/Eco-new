@@ -32,13 +32,13 @@ namespace Backend.Data
                 .Property(o => o.UnitPrice)
                 .HasPrecision(18, 2);
 
-            // Configure SubAdmin Roles list conversion - commented out since Roles is now string
-            // modelBuilder.Entity<SubAdmin>()
-            //     .Property(s => s.Roles)
-            //     .HasConversion(
-            //         v => string.Join(";", v),
-            //         v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
-            //     );
+            // Configure SubAdmin Roles list conversion
+            modelBuilder.Entity<SubAdmin>()
+                .Property(s => s.Roles)
+                .HasConversion(
+                    v => string.Join(";", v),
+                    v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
+                );
 
             modelBuilder.Entity<ReviewRating>()
                 .Property(r => r.Images)

@@ -330,14 +330,14 @@ const ProductDetails = () => {
             </div>
 
             {/* Product Specifications */}
-            {(product.gst || product.hsn1 || product.moq || product.piecesPerPack || product.shipsIn) && (
+            {(product.gst || product.hsn1 || product.moq || product.piecesPerPack || product.shipsIn || product.minOrderQuantity) && (
               <div className="bg-white p-6 rounded-lg shadow-sm">
                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Business Specifications</h3>
                 <div className="">
                   {product.gst && (
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">GST:</span>
-                      <span className="text-gray-800">{product.gst}%</span>
+                      <span className="text-gray-800">{product.gst}</span>
                     </div>
                   )}
                   {product.hsn1 && (
@@ -350,6 +350,12 @@ const ProductDetails = () => {
                     <div className="flex justify-between py-2 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">MOQ:</span>
                       <span className="text-gray-800">{product.moq}</span>
+                    </div>
+                  )}
+                  {product.minOrderQuantity && (
+                    <div className="flex justify-between py-2 border-b border-gray-100">
+                      <span className="text-gray-500 font-medium">Min Order Quantity:</span>
+                      <span className="text-gray-800">{product.minOrderQuantity}</span>
                     </div>
                   )}
                   {product.piecesPerPack && (
@@ -441,6 +447,12 @@ const ProductDetails = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500 text-sm">Weight:</span>
                         <span className="font-medium bg-gray-100 px-2 py-1 rounded text-sm">{variant.weight}</span>
+                      </div>
+                    )}
+                    {variant.stock2 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500 text-sm">Stock2:</span>
+                        <span className="font-medium bg-gray-100 px-2 py-1 rounded text-sm">{variant.stock2}</span>
                       </div>
                     )}
                     
@@ -577,13 +589,13 @@ const ProductDetails = () => {
         <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Actions</h3>
           <div className="flex flex-wrap gap-3">
-            <button
+            {/* <button
               onClick={handleEditProduct}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
             >
               <span>✏️</span>
               <span>Edit Product</span>
-            </button>
+            </button> */}
             <button
               onClick={() => setShowDeleteModal(true)}
               className="px-6 py-3 border-2 border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors flex items-center space-x-2"

@@ -74,7 +74,7 @@ const ProductDetails = () => {
               
               initialVariants[color] = {
                 ...normalizedVariant,
-                quantity: 1
+                quantity: parseInt(data.moq) || 1
               };
             }
           });
@@ -94,13 +94,27 @@ const ProductDetails = () => {
   }, [id]);
 
   const handleQuantityChange = (color, change) => {
-    setSelectedVariants(prev => ({
-      ...prev,
-      [color]: {
-        ...prev[color],
-        quantity: Math.max(1, (prev[color]?.quantity || 1) + change),
-      }
-    }));
+    setSelectedVariants(prev => {
+      const currentVariant = prev[color];
+      if (!currentVariant) return prev;
+
+      // Find the exact variant to get its stock
+      const exactVariant = product.variants?.find(v => 
+        (v.color || v.Color) === color && (v.size || v.Size) === selectedSize
+      );
+      
+      const maxStock = parseInt(exactVariant?.stock || exactVariant?.Stock) || 999;
+      const currentQuantity = parseInt(currentVariant.quantity) || 1;
+      const newQuantity = currentQuantity + change;
+
+      return {
+        ...prev,
+        [color]: {
+          ...currentVariant,
+          quantity: Math.max(1, Math.min(maxStock, newQuantity)),
+        }
+      };
+    });
   };
 
   const handleSizeChange = (size) => {
@@ -128,7 +142,7 @@ const ProductDetails = () => {
         };
         updatedVariants[color] = {
           ...normalizedVariant,
-          quantity: selectedVariants[color]?.quantity || 1
+          quantity: selectedVariants[color]?.quantity || parseInt(product.moq) || 1
         };
       }
     });
@@ -418,6 +432,13 @@ const ProductDetails = () => {
                 const currentVariant = selectedVariants[color];
                 const isValidVariant = currentVariant && currentVariant.color === color && currentVariant.size === selectedSize;
                 
+                // Get the exact variant to access stock information
+                const exactVariant = product.variants?.find(v => 
+                  (v.color || v.Color) === color && (v.size || v.Size) === selectedSize
+                );
+                const maxStock = parseInt(exactVariant?.stock || exactVariant?.Stock) || 999;
+                const currentQuantity = parseInt(currentVariant?.quantity) || 0;
+                
                 return (
                   <div key={color} className={`flex items-center justify-between p-3 rounded-lg border ${
                     isValidVariant ? 'bg-gray-50' : 'bg-gray-200 opacity-60'
@@ -427,25 +448,30 @@ const ProductDetails = () => {
                         className="w-6 h-6 rounded-full border border-gray-300" 
                         style={{ backgroundColor: getColorHex(color) }}
                       />
-                      <span className="text-sm font-medium text-gray-700">{color}</span>
-                      {!isValidVariant && (
-                        <span className="text-xs text-red-500">(Not available in {selectedSize})</span>
-                      )}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-700">{color}</span>
+                        {isValidVariant && (
+                          <span className="text-xs text-gray-500">Stock: {maxStock}</span>
+                        )}
+                        {!isValidVariant && (
+                          <span className="text-xs text-red-500">(Not available in {selectedSize})</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => handleQuantityChange(color, -1)} 
-                        disabled={!isValidVariant}
+                        disabled={!isValidVariant || currentQuantity <= 1}
                         className="w-8 h-8 bg-white border border-gray-300 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 font-semibold"
                       >
                         −
                       </button>
                       <span className="w-8 text-center font-medium text-gray-800">
-                        {isValidVariant ? (currentVariant.quantity || 1) : 0}
+                        {isValidVariant ? currentQuantity : 0}
                       </span>
                       <button 
                         onClick={() => handleQuantityChange(color, 1)} 
-                        disabled={!isValidVariant}
+                        disabled={!isValidVariant || currentQuantity >= maxStock}
                         className="w-8 h-8 bg-white border border-gray-300 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 font-semibold"
                       >
                         +
@@ -575,7 +601,7 @@ const ProductDetails = () => {
             <p><strong>Brand:</strong> {product.brand}</p>
             <p><strong>Category:</strong> {product.category}</p>
             <p><strong>Subcategory:</strong> {product.subcategory}</p>
-            <p><strong>GST:</strong> {product.gst}%</p>
+            <p><strong>GST:</strong> {product.gst}</p>
             <p><strong>HSN Code:</strong> {product.hsn1}</p>
             <p><strong>Added On:</strong> {new Date(product.createdAt).toLocaleDateString()}</p>
             <p><strong>Pattern:</strong> {product.pattern}</p>
@@ -583,7 +609,7 @@ const ProductDetails = () => {
             <p><strong>Neck Type:</strong> {product.neckType}</p>
             <p><strong>Sleeve Length:</strong> {product.sleeveLength}</p>
             <p><strong>Occasion:</strong> {product.occasion}</p>
-            <p><strong>MOQ:</strong> {product.moq} Packs (Each pack contains {product.piecesPerPack} items)</p>
+            <p><strong>Minimum Order Quantity:</strong> {product.moq} Packs (Each pack contains {product.piecesPerPack} items)</p>
             <p className="pt-2">{product.description}</p>
             <p className="pt-2">
               <strong>Average Delivery Time:</strong> {product.shipsIn} days<br />

@@ -129,6 +129,19 @@ const OrderPage = () => {
 
       const orderResults = await Promise.all(orderPromises);
 
+      // Prepare order items for stock deduction
+      const orderItemsForStock = orderItems.map(currentItem => {
+        const variant = getVariantForOrderItem(currentItem);
+        return {
+          productId: currentItem.product.id,
+          variantId: currentItem.variantId,
+          quantity: currentItem.quantity,
+          productName: currentItem.product.name,
+          variantColor: variant?.color || variant?.Color,
+          variantSize: variant?.size || variant?.Size
+        };
+      });
+
       // Navigate to success page with bulk order info
       navigate('/ordersuccess', { 
         state: { 
@@ -136,7 +149,8 @@ const OrderPage = () => {
           isBulkOrder: isBulkOrder,
           totalItems: orderItems.length,
           totalAmount: totalAmount,
-          sellers: sellers.length
+          sellers: sellers.length,
+          orderItemsForStock: orderItemsForStock
         } 
       });
 

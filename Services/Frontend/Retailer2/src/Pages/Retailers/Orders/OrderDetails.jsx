@@ -14,32 +14,75 @@ const OrderDetails = () => {
     if (order.status === 'Cancelled') return;
     setLoading(true);
     setMessage('');
+    
     try {
+      console.log('Starting order cancellation process...', {
+        orderId: order.id,
+        productId: order.productId,
+        variantId: order.variantId,
+        quantity: order.quantity
+      });
+
       // 1. Update order status to Cancelled
       const statusRes = await fetch(`/api/Order/${order.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify('Cancelled'),
       });
-      if (!statusRes.ok) throw new Error('Failed to update order status');
+      
+      if (!statusRes.ok) {
+        const errorData = await statusRes.json();
+        throw new Error(`Failed to update order status: ${errorData.message || statusRes.statusText}`);
+      }
+      
+      console.log('Order status updated to Cancelled');
+
       // 2. Re-add quantity to variant stock
       const productRes = await fetch(`/api/Product/${order.productId}`);
-      if (!productRes.ok) throw new Error('Failed to fetch product');
+      if (!productRes.ok) {
+        throw new Error(`Failed to fetch product: ${productRes.statusText}`);
+      }
+      
       const product = await productRes.json();
+      console.log('Product fetched:', product.name);
+      
       const variant = (product.variants || []).find(v => (v.id || v.Id) === order.variantId);
-      if (!variant) throw new Error('Variant not found');
+      if (!variant) {
+        throw new Error(`Variant not found for ID: ${order.variantId}`);
+      }
+      
       const currentStock = parseInt(variant.stock || variant.Stock || 0, 10);
-      const newStock = currentStock + order.quantity;
+      const orderQuantity = parseInt(order.quantity, 10);
+      const newStock = currentStock + orderQuantity;
+      
+      console.log('Stock calculation:', {
+        currentStock,
+        orderQuantity,
+        newStock,
+        variantColor: variant.color || variant.Color,
+        variantSize: variant.size || variant.Size
+      });
+
       const stockRes = await fetch(`/api/Product/update-variant-stock/${order.productId}/${order.variantId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newStock: newStock })
       });
-      if (!stockRes.ok) throw new Error('Failed to update stock');
+      
+      if (!stockRes.ok) {
+        const errorData = await stockRes.json();
+        throw new Error(`Failed to update stock: ${errorData.message || stockRes.statusText}`);
+      }
+      
+      console.log('Stock updated successfully');
+      
+      // Update local order state
       setOrder({ ...order, status: 'Cancelled' });
-      setMessage('Order cancelled and stock updated successfully.');
+      setMessage(`Order cancelled successfully! Stock restored: ${orderQuantity} units added back to ${variant.color || variant.Color} - ${variant.size || variant.Size}`);
+      
     } catch (err) {
-      setMessage('Error: ' + err.message);
+      console.error('Error cancelling order:', err);
+      setMessage(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }

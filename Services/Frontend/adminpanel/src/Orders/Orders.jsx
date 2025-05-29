@@ -179,7 +179,7 @@ export default function Orders() {
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="text-sm text-gray-900">
-                      {formatCurrency(order.totalAmount || order.unitPrice * order.quantity)}
+                    ₹{(order.totalAmount || order.unitPrice * order.quantity)}
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
@@ -254,7 +254,7 @@ export default function Orders() {
         <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
           <dt className="truncate text-sm font-medium text-gray-500">Total Revenue</dt>
           <dd className="mt-1 text-3xl font-semibold text-cyan-600">
-            {formatCurrency(
+          ₹{(
               orders
                 .filter(order => order.status?.toLowerCase() === 'delivered')
                 .reduce((sum, order) => sum + (order.totalAmount || order.unitPrice * order.quantity || 0), 0)

@@ -93,6 +93,7 @@ namespace Backend.Models
         public string MainImage { get; set; }
         public string Top { get; set; }
         public string Trending { get; set; }
+        
     }
 
     public class ProductVariant
@@ -104,5 +105,6 @@ namespace Backend.Models
         public string Weight { get; set; }
         public string Stock { get; set; }
         public decimal Price { get; set; }
+       
     }
 }

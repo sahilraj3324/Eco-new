@@ -53,7 +53,8 @@ export default function EditProduct() {
     imageUrls: [],
     variants: [],
     top: 'false',
-    trending: 'false'
+    trending: 'false',
+    minOrderQuantity: ''
   })
 
   const colorPalette = [
@@ -328,7 +329,8 @@ export default function EditProduct() {
           size: size.size,
           weight: size.weight || '',
           stock: parseInt(size.stock) || 0,
-          price: parseFloat(size.price) || 0
+          price: parseFloat(size.price) || 0,
+          stock2: String(parseInt(size.stock) || 0)
         }))
       )
 
@@ -369,7 +371,8 @@ export default function EditProduct() {
         variants: flattenedVariants,
         variantsJson: JSON.stringify(flattenedVariants),
         top: product.top,
-        trending: product.trending
+        trending: product.trending,
+        minOrderQuantity: product.minOrderQuantity
       }
       
       console.log('Sending product data:', productData)
@@ -761,6 +764,16 @@ export default function EditProduct() {
                     type="text"
                     name="piecesPerPack"
                     value={product.piecesPerPack}
+                    onChange={handleInputChange}
+                    className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Order Quantity</label>
+                  <input
+                    type="text"
+                    name="minOrderQuantity"
+                    value={product.minOrderQuantity}
                     onChange={handleInputChange}
                     className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
                   />
