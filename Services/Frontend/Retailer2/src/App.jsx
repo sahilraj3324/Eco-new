@@ -17,7 +17,12 @@ import Footer from './Pages/Retailers/Footer';
 import Allorder from './Pages/Retailers/Orders/AllOrders';
 import WishlistPage from './Pages/Retailers/Wishlist/wishlist';
 import OrderDetails from './Pages/Retailers/Orders/OrderDetails';
-
+import About from './Pages/Retailers/Footer/about';
+import HelpSupport from './Pages/Retailers/Footer/helpSupport';
+import Privacy from './Pages/Retailers/Footer/privacy';
+import RefundPolicy from './Pages/Retailers/Footer/refundPolicy';
+import TermsOfUse from './Pages/Retailers/Footer/terms_of_use';
+import FAQ from './Pages/Retailers/Footer/faq';
 function App() {
   const [count, setCount] = useState(0)
 
@@ -37,9 +42,14 @@ function App() {
       <Route path="/all" element={<AllProductsPage />} />
       <Route path="/retailerOrder" element={<RetailerOrders />} />
       <Route path="/order/:id" element={<OrderDetails />} />
+      <Route path="/about" element={<About />} />
       <Route path="*" element={<h2>404 Not Found</h2>} />
       <Route path="/wishlist" element={<WishlistPage />} />
-
+      <Route path="/helpSupport" element={<HelpSupport />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/refundPolicy" element={<RefundPolicy />} />
+      <Route path="/terms_of_use" element={<TermsOfUse />} />
+      <Route path="/faq" element={<FAQ />} />
     </Routes>
     <Footer />
   </Router>

@@ -28,12 +28,12 @@ const footerSections = [
   {
     title: "Quick Links",
     links: [
-      { label: "Help & Support", path: "/support" },
+      { label: "Help & Support", path: "/helpSupport" },
       { label: "About Ecocys", path: "/about" },
       { label: "FAQs", path: "/faq" },
-      { label: "Privacy Policy", path: "/privacy-policy" },
-      { label: "Refund Policy", path: "/refund-policy" },
-      { label: "Terms Of Use", path: "/terms" },
+      { label: "Privacy Policy", path: "/privacy" },
+      { label: "Refund Policy", path: "/refundPolicy" },
+      { label: "Terms Of Use", path: "/terms_of_use" },
     ],
   },
   {
