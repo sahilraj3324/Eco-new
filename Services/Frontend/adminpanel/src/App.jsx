@@ -10,6 +10,7 @@ import ViewProduct from './Products/ViewProduct'
 import Retailers from './Retailer/Retailers'
 import Orders from './Orders/Orders'
 import Asks from './Asks/Asks'
+import Banners from './Banner/Banners'
 import EditProduct from './Products/EditProduct'
 import AddProduct from './Vendor/AddProduct'
 import VendorDetails from './Vendor/VendorDetails'
@@ -17,6 +18,7 @@ import EditVendor from './Vendor/EditVendor'
 import CategoryPage from './Categories/Category'
 import ViewSubcategoriesPage from './Categories/ViewSubcategories'
 import Admin from './Admin/Admin'
+import Role from './Role/Role'
 import Login from './Auth/Login'
 import Signup from './Auth/Signup'
 
@@ -49,6 +51,8 @@ function App() {
           <Route path="retailers" element={<Retailers />} />
           <Route path="orders" element={<Orders />} />
           <Route path="asks" element={<Asks />} />
+          <Route path="banners" element={<Banners />} />
+          <Route path="roles" element={<Role />} />
           <Route path="admins" element={<Admin />} />
         </Route>
 

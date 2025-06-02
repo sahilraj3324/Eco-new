@@ -35,7 +35,8 @@ const SingleProduct = () => {
     brand: "",
     variants: [],
     top: "false",
-    trending: "false"
+    trending: "false",
+    minOrderQuantity: ""
   });
 
   const [newColor, setNewColor] = useState("");
@@ -247,7 +248,8 @@ const SingleProduct = () => {
           size: size.size,
           weight: size.weight || "",
           stock: size.stock,
-          price: Number(size.price) || 0
+          price: Number(size.price) || 0,
+          stock2: size.stock // Adding stock2 field as per schema
         }))
       );
 
@@ -287,7 +289,8 @@ const SingleProduct = () => {
         variantsJson: JSON.stringify(flattenedVariants),
         status: "In Review",
         top: information.top,
-        trending: information.trending
+        trending: information.trending,
+        minOrderQuantity: information.minOrderQuantity
       };
 
       const response = await axios.post("/api/Product/add", product, {
@@ -316,7 +319,8 @@ const SingleProduct = () => {
         brand: "",
         variants: [],
         top: "false",
-        trending: "false"
+        trending: "false",
+        minOrderQuantity: ""
       });
       setUploadedImages([]);
       setMainImageFile(null);
@@ -596,6 +600,13 @@ const SingleProduct = () => {
                   name="piecesPerPack"
                   placeholder="Pieces per Pack"
                   value={information.piecesPerPack}
+                  onChange={handleChange}
+                />
+                <input
+                  className="p-3 rounded-lg bg-gray-100 w-full "
+                  name="minOrderQuantity"
+                  placeholder="Minimum Order Quantity"
+                  value={information.minOrderQuantity}
                   onChange={handleChange}
                 />
                 <input

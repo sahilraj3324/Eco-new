@@ -1,0 +1,4 @@
+name,description,price,stock,category,subcategory,brand,material,gst,hsn1,moq,piecesPerPack,fitShape,neckType,occasion,pattern,sleeveLength,shipsIn,minOrderQuantity,variants
+Basic T-Shirt,Simple cotton t-shirt,499,50,Men's Clothing,T-Shirts,Brand A,Cotton,5%,6109,10,5,Regular Fit,Round Neck,Casual,Solid,Short Sleeve,2,5,"M,Blue,0.2,50,499"
+Casual Shirt,Comfortable casual shirt,799,30,Men's Clothing,Shirts,Brand B,Cotton,5%,6109,5,3,Regular Fit,Collar,Casual,Checked,Full Sleeve,3,3,"L,White,0.3,30,799"
+Summer Dress,Light summer dress for women,999,25,Women's Clothing,Dresses,Brand C,Cotton,5%,6204,8,2,A-Line,Round Neck,Casual,Floral,Sleeveless,2,2,"M,Pink,0.4,25,999" 

@@ -24,17 +24,36 @@ namespace Backend.Models
         [Required]
         public string Password { get; set; }
 
-        // Map to the actual database column name "Role" (singular)
+        // Map to the actual database column name "Role" (singular) - now stores Role IDs
         [Required]
         [Column("Role")]
         public string Roles { get; set; } = "";
 
-        // Helper property to work with List<string> in API
+        // Helper property to work with List<string> in API for Role IDs
         [NotMapped]
         public List<string> RolesList 
         { 
             get => string.IsNullOrEmpty(Roles) ? new List<string>() : Roles.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
             set => Roles = string.Join(";", value ?? new List<string>());
+        }
+
+        // Navigation property for related roles (not mapped to database)
+        [NotMapped]
+        public List<Role> AssignedRoles { get; set; } = new List<Role>();
+
+        // Helper property to get tabs from assigned roles
+        [NotMapped]
+        public List<string> AccessibleTabs 
+        { 
+            get 
+            {
+                var tabs = new List<string>();
+                foreach (var role in AssignedRoles)
+                {
+                    tabs.AddRange(role.Tabs);
+                }
+                return tabs.Distinct().ToList();
+            }
         }
     }
 }

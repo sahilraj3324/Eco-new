@@ -5,14 +5,16 @@ import logo from '../assets/logo.png'
 
 // Define all navigation items with their required roles
 const allNavItems = [
-  { name: 'Dashboard', path: '/dashboard', roles: ['admin'] }, // Only admin can see dashboard
+  { name: 'Dashboard', path: '/dashboard', roles: ['admin', 'dashboard'] }, // Admin or dashboard role
   { name: 'Vendors', path: '/vendors', roles: ['admin', 'vendors'] },
   { name: 'Products', path: '/products', roles: ['admin', 'products'] },
   { name: 'Categories', path: '/categories', roles: ['admin', 'categories'] },
   { name: 'Retailers', path: '/retailers', roles: ['admin', 'retailers'] },
   { name: 'Orders', path: '/orders', roles: ['admin', 'orders'] },
   { name: 'Asks', path: '/asks', roles: ['admin', 'asks'] },
-  { name: 'Admins', path: '/admins', roles: ['admin'] }, // Only admin can manage other admins
+  { name: 'Banners', path: '/banners', roles: ['admin', 'banners'] },
+  { name: 'Roles', path: '/roles', roles: ['admin', 'roles'] }, // Admin or roles permission
+  { name: 'Admins', path: '/admins', roles: ['admin', 'admins'] }, // Admin or admins permission
 ]
 
 export default function Layout() {
@@ -30,24 +32,47 @@ export default function Layout() {
       return allNavItems
     }
     
-    // SubAdmin has access based on their roles
-    // Check multiple possible property names for roles
+    // SubAdmin has access based on their accessible tabs from assigned roles
+    // Check multiple possible property names for roles and tabs
     const userRoles = user.roles || user.Roles || user.role || []
+    const userTabs = user.accessibleTabs || user.AccessibleTabs || []
     const rolesArray = Array.isArray(userRoles) ? userRoles : [userRoles]
+    const tabsArray = Array.isArray(userTabs) ? userTabs : [userTabs]
     
-    console.log('User roles for filtering:', rolesArray) // Debug log
+    console.log('🔍 SubAdmin Navigation Debug:')
+    console.log('  - User object:', user)
+    console.log('  - User roles:', rolesArray)
+    console.log('  - User accessible tabs:', tabsArray)
+    console.log('  - Available nav items:', allNavItems)
     
-    return allNavItems.filter(item => 
-      item.roles.some(role => rolesArray.includes(role))
-    )
+    // Filter based on accessible tabs
+    const filteredItems = allNavItems.filter(item => {
+      // Check if user has access to any of the required roles/tabs
+      const hasAccess = item.roles.some(role => {
+        if (role === 'admin') return false // SubAdmins can't access admin-only items unless they have specific permission
+        return tabsArray.includes(role) || rolesArray.includes(role)
+      })
+      
+      console.log(`  - ${item.name} (${item.path}): ${hasAccess ? '✅' : '❌'} - Required: [${item.roles.join(', ')}]`)
+      return hasAccess
+    })
+    
+    console.log('  - Final filtered items:', filteredItems)
+    return filteredItems
   }
 
   const navItems = getFilteredNavItems()
   
-  // Redirect SubAdmin to their first available tab if they're on dashboard
+  // Redirect SubAdmin to their first available tab if they're on dashboard and don't have dashboard access
   useEffect(() => {
-    if (user?.userType !== 'admin' && location.pathname === '/dashboard' && navItems.length > 0) {
-      navigate(navItems[0].path)
+    if (user?.userType !== 'admin' && location.pathname === '/dashboard') {
+      const userTabs = user.accessibleTabs || user.AccessibleTabs || []
+      const tabsArray = Array.isArray(userTabs) ? userTabs : [userTabs]
+      
+      // If user doesn't have dashboard access, redirect to first available tab
+      if (!tabsArray.includes('dashboard') && navItems.length > 0) {
+        navigate(navItems[0].path)
+      }
     }
   }, [user, location.pathname, navItems, navigate])
   
@@ -75,16 +100,16 @@ export default function Layout() {
       <div
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed inset-y-0 left-0 z-30 w-64 transform overflow-y-auto bg-cyan-600 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0`}
+        } fixed inset-y-0 left-0 z-30 w-64 transform overflow-y-auto bg-blue-900 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0`}
       >
         <div className="flex h-16 items-center justify-between border-b border-cyan-500 px-6">
-          <div className="flex items-center">
-            <img src={logo} alt="Eco Logo" className="h-8 w-8" />
+          <div className="flex items-center justify-center">
+            <img src={logo} alt="Eco Logo" className="h-14 w-auto" />
           </div>
           <button 
             className="text-white lg:hidden"
             onClick={() => setSidebarOpen(false)}
-          >
+            >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -99,8 +124,13 @@ export default function Layout() {
               {user?.userType === 'admin' ? 'Administrator' : 
                 (() => {
                   const userRoles = user?.roles || user?.Roles || user?.role || []
+                  const userTabs = user?.accessibleTabs || user?.AccessibleTabs || []
                   const rolesArray = Array.isArray(userRoles) ? userRoles : [userRoles]
-                  return rolesArray.length > 0 ? rolesArray.join(', ').replace(/_/g, ' ') : 'SubAdmin'
+                  const tabsArray = Array.isArray(userTabs) ? userTabs : [userTabs]
+                  
+                  // Show accessible tabs if available, otherwise show roles
+                  const displayItems = tabsArray.length > 0 ? tabsArray : rolesArray
+                  return displayItems.length > 0 ? displayItems.join(', ').replace(/_/g, ' ') : 'SubAdmin'
                 })()
               }
             </p>

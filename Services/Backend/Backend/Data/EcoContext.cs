@@ -18,6 +18,7 @@ namespace Backend.Data
         public DbSet<AskAdmin> AskAdmins { get; set; }
         public DbSet<Admin> Admins { get; set; }
         public DbSet<SubAdmin> SubAdmins { get; set; }
+        public DbSet<Role> Roles { get; set; }
         public DbSet<ReviewRating> ReviewRatings { get; set; }
         public DbSet<ImageStore> ImageStores { get; set; }
 

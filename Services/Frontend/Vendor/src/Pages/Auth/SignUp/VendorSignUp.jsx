@@ -74,7 +74,7 @@ const VendorSignUp = () => {
       localStorage.setItem("profile_picture", response.data.seller.profile_picture);
       localStorage.setItem("userType", response.data.seller.userType);
 
-      navigate("/vendordashboard");
+      navigate("/");
     } catch (error) {
       setError(
         error.response?.data?.message || "Failed to register user. Please try again."

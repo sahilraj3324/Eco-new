@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import logo from '../../../assets/logo.png'; // Adjust the path based on your folder structure
 
 const VendorLogin = () => {
@@ -36,12 +36,14 @@ const VendorLogin = () => {
         }
       );
       
+      console.log(response.data)
 
       
 
       // Save data to localStorage
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("Id", response.data.seller.id);
+      localStorage.setItem("storename", response.data.seller.storename);
       localStorage.setItem("userType", response.data.seller.userType);
       localStorage.setItem("Status", response.data.seller.status);
 
@@ -119,9 +121,9 @@ const VendorLogin = () => {
         {/* Signup or Support Link */}
         <p className="text-center text-sm text-gray-500">
           Don't have an account?{" "}
-          <span className="text-cyan-600 font-semibold cursor-pointer hover:underline">
+          <Link to="/vendorsignup" className="text-cyan-600 font-semibold cursor-pointer hover:underline">
             Contact support
-          </span>
+          </Link>
         </p>
       </div>
     </div>

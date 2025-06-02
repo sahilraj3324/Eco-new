@@ -7,8 +7,7 @@ import logo from '../assets/logo.png';
 export default function Login() {
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    userType: 'admin' // 'admin' or 'subadmin'
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,8 +32,10 @@ export default function Login() {
     try {
       let response;
       let userData;
+      let loginSuccessful = false;
 
-      if (formData.userType === 'admin') {
+      // Try admin login first
+      try {
         response = await adminApi.login({
           email: formData.email,
           password: formData.password
@@ -44,29 +45,45 @@ export default function Login() {
           userType: 'admin',
           role: 'admin' // Admin has full access
         };
-      } else {
-        response = await subAdminApi.login({
-          email: formData.email,
-          password: formData.password
-        });
-        userData = {
-          ...response.subAdmin,
-          userType: 'subadmin',
-          roles: response.subAdmin.Roles || response.subAdmin.roles || [], // Store roles array
-          role: response.subAdmin.Roles || response.subAdmin.roles || [] // Backup for compatibility
-        };
+        loginSuccessful = true;
+      } catch (adminError) {
+        console.log('Admin login failed, trying subadmin...', adminError.response?.status);
+        
+        // If admin login fails, try subadmin login
+        try {
+          response = await subAdminApi.login({
+            email: formData.email,
+            password: formData.password
+          });
+          userData = {
+            ...response.subAdmin,
+            userType: 'subadmin',
+            roles: response.subAdmin.Roles || response.subAdmin.roles || [], // Store roles array
+            accessibleTabs: response.subAdmin.AccessibleTabs || response.subAdmin.accessibleTabs || [], // Store accessible tabs
+            assignedRoles: response.subAdmin.AssignedRoles || response.subAdmin.assignedRoles || [], // Store role details
+            role: response.subAdmin.Roles || response.subAdmin.roles || [] // Backup for compatibility
+          };
+          loginSuccessful = true;
+        } catch (subAdminError) {
+          console.log('SubAdmin login also failed', subAdminError.response?.status);
+          // Both logins failed
+          throw new Error('Invalid credentials');
+        }
       }
 
-      // Login user with token and user data
-      login(response.token, userData);
+      if (loginSuccessful) {
+        // Login user with token and user data
+        login(response.token, userData);
 
-      // Navigate to dashboard
-      navigate('/dashboard');
+        // Navigate to dashboard
+        navigate('/dashboard');
+      }
       
     } catch (err) {
       console.error('Login error:', err);
       setError(
         err.response?.data?.message || 
+        err.message ||
         'Login failed. Please check your credentials and try again.'
       );
     } finally {
@@ -86,43 +103,12 @@ export default function Login() {
             Admin Login
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to your admin account
+            Sign in to your account
           </p>
         </div>
 
         {/* Form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {/* User Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Login as
-            </label>
-            <div className="flex space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="userType"
-                  value="admin"
-                  checked={formData.userType === 'admin'}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">Admin</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="userType"
-                  value="subadmin"
-                  checked={formData.userType === 'subadmin'}
-                  onChange={handleChange}
-                  className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">Sub Admin</span>
-              </label>
-            </div>
-          </div>
-
           {/* Email */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">

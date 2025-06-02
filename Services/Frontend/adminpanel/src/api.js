@@ -1368,7 +1368,7 @@ export const subAdminApi = {
         Name: subAdminData.name || subAdminData.Name,
         Email: subAdminData.email || subAdminData.Email,
         Phone: subAdminData.phone || subAdminData.Phone,
-        Password: subAdminData.password || subAdminData.Password,
+        Password: subAdminData.password || subAdminData.Password || "",
         Roles: subAdminData.Roles || subAdminData.roles || []
       };
       
@@ -1389,6 +1389,30 @@ export const subAdminApi = {
       return normalizedData;
     } catch (error) {
       console.error(`Error updating subadmin ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Update subadmin roles only
+  updateRoles: async (id, roles) => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'put',
+        url: `/SubAdmin/${id}/roles`,
+        data: roles,
+        ...authConfig()
+      });
+      
+      // Normalize response data for frontend compatibility
+      const normalizedData = {
+        ...response.data,
+        roles: response.data.Roles || response.data.roles || [],
+        Roles: response.data.Roles || response.data.roles || []
+      };
+      
+      return normalizedData;
+    } catch (error) {
+      console.error(`Error updating subadmin roles ${id}:`, error);
       throw error;
     }
   },
@@ -1451,6 +1475,130 @@ export const subAdminApi = {
       return normalizedData;
     } catch (error) {
       console.error(`Error removing role from subadmin ${id}:`, error);
+      throw error;
+    }
+  }
+};
+
+// Role API calls
+export const roleApi = {
+  // Get all roles
+  getAll: async () => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'get',
+        url: '/Role',
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all roles:', error);
+      throw error;
+    }
+  },
+
+  // Get role by id
+  getById: async (id) => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'get',
+        url: `/Role/${id}`,
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching role ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Create a new role
+  create: async (roleData) => {
+    try {
+      // Ensure proper data structure for Role
+      const formattedData = {
+        Name: roleData.name || roleData.Name,
+        Tabs: roleData.tabs || roleData.Tabs || []
+      };
+      
+      const response = await tryBothApproaches({
+        method: 'post',
+        url: '/Role',
+        data: formattedData,
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating role:', error);
+      throw error;
+    }
+  },
+
+  // Update a role
+  update: async (id, roleData) => {
+    try {
+      // Ensure proper data structure for Role
+      const formattedData = {
+        Id: id,
+        Name: roleData.name || roleData.Name,
+        Tabs: roleData.tabs || roleData.Tabs || []
+      };
+      
+      const response = await tryBothApproaches({
+        method: 'put',
+        url: `/Role/${id}`,
+        data: formattedData,
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating role ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Update role tabs
+  updateTabs: async (id, tabs) => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'put',
+        url: `/Role/${id}/tabs`,
+        data: tabs,
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating role tabs ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a role
+  delete: async (id) => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'delete',
+        url: `/Role/${id}`,
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting role ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // Get available tabs
+  getAvailableTabs: async () => {
+    try {
+      const response = await tryBothApproaches({
+        method: 'get',
+        url: '/Role/available-tabs',
+        ...authConfig()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available tabs:', error);
       throw error;
     }
   }
@@ -1536,6 +1684,7 @@ const api = {
   askAdmin: askAdminApi,
   admin: adminApi,
   subAdmin: subAdminApi,
+  role: roleApi,
   diagnostic: diagnosticApi
 };
 

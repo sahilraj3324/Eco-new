@@ -80,6 +80,26 @@ export default function ViewSubcategoriesPage() {
     }
   };
 
+  const handleDeleteSubcategory = async (subcategoryId, subcategoryName) => {
+    if (!window.confirm(`Are you sure you want to delete the subcategory "${subcategoryName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.subCategory.delete(subcategoryId);
+      setSuccessMessage('Subcategory deleted successfully!');
+      fetchSubcategories(); // Refresh the list
+      setError(null);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setError(`Failed to delete subcategory: ${err.message || 'Unknown error'}`);
+      setSuccessMessage('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loadingCategory || (loading && subcategories.length === 0 && !category)) {
     return (
       <div className="flex justify-center py-12">
@@ -182,7 +202,9 @@ export default function ViewSubcategoriesPage() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     ID
                   </th>
-                  {/* Add more columns like actions if needed in future */}
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
@@ -193,6 +215,17 @@ export default function ViewSubcategoriesPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                       {subcategory.id}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleDeleteSubcategory(subcategory.id, subcategory.subCategoryName)}
+                        className="inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                      >
+                        <svg className="h-5 w-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

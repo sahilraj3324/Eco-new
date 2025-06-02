@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { isAdmin } from '../utils/auth';
+import { getCurrentUser, isAdmin, isSubAdmin } from '../utils/auth';
 
 export default function Admin() {
-  const [activeTab, setActiveTab] = useState('admins');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userType, setUserType] = useState(null);
   const [admins, setAdmins] = useState([]);
   const [subAdmins, setSubAdmins] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -30,17 +32,13 @@ export default function Admin() {
   });
   const [editingSubAdminId, setEditingSubAdminId] = useState(null);
 
-  // Role options for SubAdmin - now matching navigation items
-  const roleOptions = [
-    'vendors',
-    'products', 
-    'categories',
-    'retailers',
-    'orders',
-    'asks'
-  ];
-
   useEffect(() => {
+    // Automatically detect user type and set initial state
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      setUserType(user.type);
+    }
     fetchData();
   }, []);
 
@@ -48,12 +46,33 @@ export default function Admin() {
     setLoading(true);
     setError(null);
     try {
-      const [adminsData, subAdminsData] = await Promise.all([
-        api.admin.getAll(),
-        api.subAdmin.getAll()
-      ]);
-      setAdmins(adminsData);
-      setSubAdmins(subAdminsData);
+      const user = getCurrentUser();
+      const userType = user?.type;
+
+      // Fetch data based on user type and permissions
+      const promises = [];
+      
+      if (userType === 'admin') {
+        // Admins can see both admins and subadmins
+        promises.push(
+          api.admin.getAll(),
+          api.subAdmin.getAll(),
+          api.role.getAll()
+        );
+      } else if (userType === 'subAdmin') {
+        // SubAdmins can only see subadmins (if they have admin permission)
+        promises.push(
+          Promise.resolve([]), // No admin access for subadmins
+          api.subAdmin.getAll(),
+          api.role.getAll()
+        );
+      }
+
+      const [adminsData, subAdminsData, rolesData] = await Promise.all(promises);
+      
+      setAdmins(adminsData || []);
+      setSubAdmins(subAdminsData || []);
+      setRoles(rolesData || []);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to load data. Please try again later.');
@@ -124,12 +143,12 @@ export default function Admin() {
     setSubAdminForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleRoleChange = (role) => {
+  const handleRoleChange = (roleId) => {
     setSubAdminForm(prev => ({
       ...prev,
-      roles: prev.roles.includes(role)
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role]
+      roles: prev.roles.includes(roleId)
+        ? prev.roles.filter(r => r !== roleId)
+        : [...prev.roles, roleId]
     }));
   };
 
@@ -146,11 +165,16 @@ export default function Admin() {
 
   const handleSubAdminSubmit = async (e) => {
     e.preventDefault();
+    if (subAdminForm.roles.length === 0) {
+      alert('Please select at least one role for the subadmin');
+      return;
+    }
+
     try {
       // Prepare data with proper structure for API
       const formData = {
         ...subAdminForm,
-        Roles: subAdminForm.roles // Map to capital R for C# model
+        Roles: subAdminForm.roles // Map to capital R for C# model (role IDs)
       };
       delete formData.roles; // Remove lowercase version
 
@@ -174,7 +198,7 @@ export default function Admin() {
       email: subAdmin.email,
       phone: subAdmin.phone,
       password: subAdmin.password || '', // Password might not be returned from API
-      roles: subAdmin.roles || subAdmin.Roles || [] // Handle both cases
+      roles: subAdmin.roles || subAdmin.Roles || [] // Handle both cases for role IDs
     });
     setEditingSubAdminId(subAdmin.id);
     setShowSubAdminForm(true);
@@ -193,9 +217,16 @@ export default function Admin() {
   };
 
   // Role management for existing SubAdmins
-  const addRoleToSubAdmin = async (subAdminId, role) => {
+  const addRoleToSubAdmin = async (subAdminId, roleId) => {
     try {
-      await api.subAdmin.addRole(subAdminId, role);
+      const subAdmin = subAdmins.find(sa => sa.id === subAdminId);
+      if (!subAdmin) return;
+
+      const currentRoles = subAdmin.roles || subAdmin.Roles || [];
+      if (currentRoles.includes(roleId)) return; // Already has this role
+
+      const updatedRoles = [...currentRoles, roleId];
+      await api.subAdmin.updateRoles(subAdminId, updatedRoles);
       fetchData();
     } catch (err) {
       console.error('Error adding role:', err);
@@ -203,9 +234,15 @@ export default function Admin() {
     }
   };
 
-  const removeRoleFromSubAdmin = async (subAdminId, role) => {
+  const removeRoleFromSubAdmin = async (subAdminId, roleId) => {
     try {
-      await api.subAdmin.removeRole(subAdminId, role);
+      const subAdmin = subAdmins.find(sa => sa.id === subAdminId);
+      if (!subAdmin) return;
+
+      const currentRoles = subAdmin.roles || subAdmin.Roles || [];
+      const updatedRoles = currentRoles.filter(r => r !== roleId);
+      
+      await api.subAdmin.updateRoles(subAdminId, updatedRoles);
       fetchData();
     } catch (err) {
       console.error('Error removing role:', err);
@@ -213,8 +250,23 @@ export default function Admin() {
     }
   };
 
+  // Helper function to get role name by ID
+  const getRoleName = (roleId) => {
+    const role = roles.find(r => r.id === roleId);
+    return role ? role.name : 'Unknown Role';
+  };
+
+  // Helper function to get assigned roles for display
+  const getSubAdminRoles = (subAdmin) => {
+    const subAdminRoleIds = subAdmin.roles || subAdmin.Roles || [];
+    return subAdminRoleIds.map(roleId => {
+      const role = roles.find(r => r.id === roleId);
+      return role || { id: roleId, name: 'Unknown Role' };
+    });
+  };
+
   // Check if user has permission to access admin management
-  if (!isAdmin()) {
+  if (!isAdmin() && !isSubAdmin()) {
     return (
       <div className="flex justify-center items-center py-12">
         <div className="text-center">
@@ -237,7 +289,15 @@ export default function Admin() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Roles & Admin Management</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">
+          {userType === 'admin' ? 'Admin & SubAdmin Management' : 'SubAdmin Management'}
+        </h1>
+        <p className="text-gray-600 mt-1">
+          {userType === 'admin' 
+            ? 'Manage administrators and assign roles to sub-administrators' 
+            : 'Manage sub-administrators and their roles'
+          }
+        </p>
       </div>
 
       {error && (
@@ -256,35 +316,9 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="mb-6 border-b border-gray-200">
-        <div className="flex flex-wrap -mb-px">
-          <button
-            className={`mr-2 inline-block py-4 px-4 text-sm font-medium ${
-              activeTab === 'admins'
-                ? 'border-b-2 border-cyan-500 text-cyan-600'
-                : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-            }`}
-            onClick={() => setActiveTab('admins')}
-          >
-            Admins
-          </button>
-          <button
-            className={`mr-2 inline-block py-4 px-4 text-sm font-medium ${
-              activeTab === 'subadmins'
-                ? 'border-b-2 border-cyan-500 text-cyan-600'
-                : 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-            }`}
-            onClick={() => setActiveTab('subadmins')}
-          >
-            Sub-Admins
-          </button>
-        </div>
-      </div>
-
-      {/* Admins Tab Content */}
-      {activeTab === 'admins' && (
-        <div>
+      {/* Show Admins Section only if user is admin */}
+      {userType === 'admin' && (
+        <div className="mb-8">
           <div className="mb-4 flex justify-between items-center">
             <h2 className="text-xl font-medium text-gray-800">Admins</h2>
             <button
@@ -386,7 +420,7 @@ export default function Admin() {
           )}
 
           {/* Admins Table */}
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow mb-8">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -446,11 +480,11 @@ export default function Admin() {
         </div>
       )}
 
-      {/* SubAdmins Tab Content */}
-      {activeTab === 'subadmins' && (
-        <div>
-          <div className="mb-4 flex justify-between items-center">
-            <h2 className="text-xl font-medium text-gray-800">Sub-Admins</h2>
+      {/* SubAdmins Section - shown for both admin and subadmin users */}
+      <div>
+        <div className="mb-4 flex justify-between items-center">
+          <h2 className="text-xl font-medium text-gray-800">Sub-Admins</h2>
+          {(userType === 'admin' || (userType === 'subAdmin' && currentUser?.data?.accessibleTabs?.includes('admins'))) && (
             <button
               onClick={() => {
                 resetSubAdminForm();
@@ -460,223 +494,243 @@ export default function Admin() {
             >
               Add Sub-Admin
             </button>
-          </div>
+          )}
+        </div>
 
-          {/* SubAdmin Form */}
-          {showSubAdminForm && (
-            <div className="mb-6 rounded-md bg-white p-6 shadow">
-              <h3 className="mb-4 text-lg font-medium text-gray-800">
-                {editingSubAdminId ? 'Edit Sub-Admin' : 'Add New Sub-Admin'}
-              </h3>
-              <form onSubmit={handleSubAdminSubmit}>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      id="sub_name"
-                      name="name"
-                      value={subAdminForm.name}
-                      onChange={handleSubAdminChange}
-                      required
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="sub_email"
-                      name="email"
-                      value={subAdminForm.email}
-                      onChange={handleSubAdminChange}
-                      required
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                      Phone
-                    </label>
-                    <input
-                      type="text"
-                      id="sub_phone"
-                      name="phone"
-                      value={subAdminForm.phone}
-                      onChange={handleSubAdminChange}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      id="sub_password"
-                      name="password"
-                      value={subAdminForm.password}
-                      onChange={handleSubAdminChange}
-                      required={!editingSubAdminId}
-                      placeholder={editingSubAdminId ? '(leave empty to keep current)' : ''}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Roles (Select multiple)
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {roleOptions.map(role => (
-                        <label key={role} className="flex items-center space-x-2 cursor-pointer">
+        {/* SubAdmin Form */}
+        {showSubAdminForm && (
+          <div className="mb-6 rounded-md bg-white p-6 shadow">
+            <h3 className="mb-4 text-lg font-medium text-gray-800">
+              {editingSubAdminId ? 'Edit Sub-Admin' : 'Add New Sub-Admin'}
+            </h3>
+            <form onSubmit={handleSubAdminSubmit}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    id="sub_name"
+                    name="name"
+                    value={subAdminForm.name}
+                    onChange={handleSubAdminChange}
+                    required
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="sub_email"
+                    name="email"
+                    value={subAdminForm.email}
+                    onChange={handleSubAdminChange}
+                    required
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    id="sub_phone"
+                    name="phone"
+                    value={subAdminForm.phone}
+                    onChange={handleSubAdminChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="sub_password"
+                    name="password"
+                    value={subAdminForm.password}
+                    onChange={handleSubAdminChange}
+                    required={!editingSubAdminId}
+                    placeholder={editingSubAdminId ? '(leave empty to keep current)' : ''}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-cyan-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Assign Roles (Select multiple)
+                  </label>
+                  {roles.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {roles.map(role => (
+                        <label key={role.id} className="flex items-start space-x-2 cursor-pointer p-3 border border-gray-200 rounded-md hover:bg-gray-50">
                           <input
                             type="checkbox"
-                            checked={subAdminForm.roles.includes(role)}
-                            onChange={() => handleRoleChange(role)}
-                            className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                            checked={subAdminForm.roles.includes(role.id)}
+                            onChange={() => handleRoleChange(role.id)}
+                            className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded mt-1"
                           />
-                          <span className="text-sm text-gray-700">
-                            {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {subAdminForm.roles.length === 0 && (
-                      <p className="mt-1 text-sm text-red-600">Please select at least one role</p>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetSubAdminForm();
-                      setShowSubAdminForm(false);
-                    }}
-                    className="mr-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={subAdminForm.roles.length === 0}
-                    className="rounded-md bg-cyan-500 px-4 py-2 text-sm text-white hover:bg-cyan-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {editingSubAdminId ? 'Update Sub-Admin' : 'Create Sub-Admin'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* SubAdmins Table */}
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Name
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Email
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Phone
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Roles
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {subAdmins.length > 0 ? (
-                  subAdmins.map((subAdmin) => (
-                    <tr key={subAdmin.id}>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{subAdmin.name}</div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <div className="text-sm text-gray-500">{subAdmin.email}</div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <div className="text-sm text-gray-500">{subAdmin.phone}</div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <div className="text-sm text-gray-500">
-                          {(subAdmin.roles || subAdmin.Roles || []).length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {(subAdmin.roles || subAdmin.Roles || []).map((role, index) => (
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-gray-700">{role.name}</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {(role.tabs || []).map((tab, index) => (
                                 <span
                                   key={index}
-                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800"
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800"
                                 >
-                                  {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                  {tab.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                 </span>
                               ))}
                             </div>
-                          ) : (
-                            <span className="text-gray-400">No roles assigned</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <p>No roles available. Please create roles first in the Role Management tab.</p>
+                    </div>
+                  )}
+                  {subAdminForm.roles.length === 0 && roles.length > 0 && (
+                    <p className="mt-1 text-sm text-red-600">Please select at least one role</p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetSubAdminForm();
+                    setShowSubAdminForm(false);
+                  }}
+                  className="mr-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={subAdminForm.roles.length === 0 || roles.length === 0}
+                  className="rounded-md bg-cyan-500 px-4 py-2 text-sm text-white hover:bg-cyan-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {editingSubAdminId ? 'Update Sub-Admin' : 'Create Sub-Admin'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* SubAdmins Table */}
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Name
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Email
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Phone
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Assigned Roles
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {subAdmins.length > 0 ? (
+                subAdmins.map((subAdmin) => (
+                  <tr key={subAdmin.id}>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">{subAdmin.name}</div>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-gray-500">{subAdmin.email}</div>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-gray-500">{subAdmin.phone}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {getSubAdminRoles(subAdmin).length > 0 ? (
+                          getSubAdminRoles(subAdmin).map((role) => (
+                            <span
+                              key={role.id}
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800"
+                            >
+                              {role.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-sm">No roles assigned</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex space-x-2">
+                          {(userType === 'admin' || (userType === 'subAdmin' && currentUser?.data?.accessibleTabs?.includes('admins'))) && (
+                            <>
+                              <button
+                                onClick={() => editSubAdmin(subAdmin)}
+                                className="text-cyan-600 hover:text-cyan-900"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => deleteSubAdmin(subAdmin.id)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                Delete
+                              </button>
+                            </>
                           )}
                         </div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                        <div className="flex flex-col space-y-1">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => editSubAdmin(subAdmin)}
-                              className="text-cyan-600 hover:text-cyan-900"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => deleteSubAdmin(subAdmin.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {roleOptions.map(role => {
-                              const hasRole = (subAdmin.roles || subAdmin.Roles || []).includes(role);
+                        {(userType === 'admin' || (userType === 'subAdmin' && currentUser?.data?.accessibleTabs?.includes('admins'))) && (
+                          <div className="flex flex-wrap gap-1">
+                            {roles.map(role => {
+                              const hasRole = (subAdmin.roles || subAdmin.Roles || []).includes(role.id);
                               return (
                                 <button
-                                  key={role}
-                                  onClick={() => hasRole ? removeRoleFromSubAdmin(subAdmin.id, role) : addRoleToSubAdmin(subAdmin.id, role)}
-                                  className={`px-2 py-1 text-xs rounded ${
+                                  key={role.id}
+                                  onClick={() => hasRole ? removeRoleFromSubAdmin(subAdmin.id, role.id) : addRoleToSubAdmin(subAdmin.id, role.id)}
+                                  className={`px-2 py-1 text-xs rounded transition-colors ${
                                     hasRole
                                       ? 'bg-green-100 text-green-800 hover:bg-green-200'
                                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                   }`}
-                                  title={hasRole ? `Remove ${role} role` : `Add ${role} role`}
+                                  title={hasRole ? `Remove ${role.name} role` : `Add ${role.name} role`}
                                 >
-                                  {hasRole ? '✓' : '+'} {role}
+                                  {hasRole ? '✓' : '+'} {role.name}
                                 </button>
                               );
                             })}
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No sub-admins found
+                        )}
+                      </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                    No sub-admins found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 } 

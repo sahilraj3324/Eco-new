@@ -16,6 +16,7 @@ import Navbar from './Pages/Retailers/Navbar';
 import Footer from './Pages/Retailers/Footer';
 import Allorder from './Pages/Retailers/Orders/AllOrders';
 import WishlistPage from './Pages/Retailers/Wishlist/wishlist';
+import OrderDetails from './Pages/Retailers/Orders/OrderDetails';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -35,6 +36,7 @@ function App() {
       <Route path="/ordersuccess" element={<OrderSuccessPage />} />
       <Route path="/all" element={<AllProductsPage />} />
       <Route path="/retailerOrder" element={<RetailerOrders />} />
+      <Route path="/order/:id" element={<OrderDetails />} />
       <Route path="*" element={<h2>404 Not Found</h2>} />
       <Route path="/wishlist" element={<WishlistPage />} />
 

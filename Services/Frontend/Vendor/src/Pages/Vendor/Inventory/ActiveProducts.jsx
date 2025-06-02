@@ -55,7 +55,7 @@ const ActiveProduct = () => {
     ) : (
         <ul className="space-y-3">
         {products
-          .filter((product) => product.status?.toLowerCase() === "approved")
+          .filter((product) => product.status?.toLowerCase() === "active")
           .map((product) => (
             <li
               key={product.id}

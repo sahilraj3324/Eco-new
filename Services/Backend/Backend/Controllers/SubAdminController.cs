@@ -26,15 +26,28 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetAllSubAdmins()
         {
             var subAdmins = await _context.SubAdmins.ToListAsync();
-            // Convert to API format with RolesList
-            var result = subAdmins.Select(s => new
-            {
-                s.Id,
-                s.Name,
-                s.Email,
-                s.Phone,
-                Roles = s.RolesList
+            
+            // Fetch all roles to get accessible tabs
+            var allRoles = await _context.Roles.ToListAsync();
+            
+            var result = subAdmins.Select(s => {
+                var roleIds = s.RolesList;
+                var assignedRoles = allRoles.Where(r => roleIds.Contains(r.Id.ToString())).ToList();
+                var accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+                
+                return new
+                {
+                    s.Id,
+                    s.Name,
+                    s.Email,
+                    s.Phone,
+                    UserType = "subadmin",
+                    Roles = s.RolesList,
+                    AccessibleTabs = accessibleTabs,
+                    AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
+                };
             }).ToList();
+            
             return Ok(result);
         }
 
@@ -44,15 +57,33 @@ namespace Backend.Controllers
             var subAdmin = await _context.SubAdmins.FindAsync(id);
             if (subAdmin == null) return NotFound();
             
-            // Convert to API format with RolesList
+            // Fetch the actual Role objects to get accessible tabs
+            var roleIds = subAdmin.RolesList;
+            var assignedRoles = new List<Role>();
+            var accessibleTabs = new List<string>();
+
+            if (roleIds.Any())
+            {
+                assignedRoles = await _context.Roles
+                    .Where(r => roleIds.Contains(r.Id.ToString()))
+                    .ToListAsync();
+
+                // Extract all tabs from assigned roles
+                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+            }
+            
             var result = new
             {
                 subAdmin.Id,
                 subAdmin.Name,
                 subAdmin.Email,
                 subAdmin.Phone,
-                Roles = subAdmin.RolesList
+                UserType = "subadmin",
+                Roles = subAdmin.RolesList,
+                AccessibleTabs = accessibleTabs,
+                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
             };
+            
             return Ok(result);
         }
 
@@ -72,6 +103,21 @@ namespace Backend.Controllers
             _context.SubAdmins.Add(subAdmin);
             await _context.SaveChangesAsync();
             
+            // Fetch the actual Role objects to get accessible tabs
+            var roleIds = subAdmin.RolesList;
+            var assignedRoles = new List<Role>();
+            var accessibleTabs = new List<string>();
+
+            if (roleIds.Any())
+            {
+                assignedRoles = await _context.Roles
+                    .Where(r => roleIds.Contains(r.Id.ToString()))
+                    .ToListAsync();
+
+                // Extract all tabs from assigned roles
+                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+            }
+            
             // Return API format
             var result = new
             {
@@ -79,7 +125,10 @@ namespace Backend.Controllers
                 subAdmin.Name,
                 subAdmin.Email,
                 subAdmin.Phone,
-                Roles = subAdmin.RolesList
+                UserType = "subadmin",
+                Roles = subAdmin.RolesList,
+                AccessibleTabs = accessibleTabs,
+                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
             };
             return Ok(result);
         }
@@ -90,13 +139,32 @@ namespace Backend.Controllers
             var subAdmin = await _context.SubAdmins.FindAsync(id);
             if (subAdmin == null) return NotFound();
 
+            // Update all fields
             subAdmin.Name = request.Name;
             subAdmin.Email = request.Email;
             subAdmin.Phone = request.Phone;
-            subAdmin.Password = request.Password;
+            if (!string.IsNullOrEmpty(request.Password))
+            {
+                subAdmin.Password = request.Password;
+            }
             subAdmin.RolesList = request.Roles ?? new List<string>();
 
             await _context.SaveChangesAsync();
+            
+            // Fetch the actual Role objects to get accessible tabs
+            var roleIds = subAdmin.RolesList;
+            var assignedRoles = new List<Role>();
+            var accessibleTabs = new List<string>();
+
+            if (roleIds.Any())
+            {
+                assignedRoles = await _context.Roles
+                    .Where(r => roleIds.Contains(r.Id.ToString()))
+                    .ToListAsync();
+
+                // Extract all tabs from assigned roles
+                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+            }
             
             // Return API format
             var result = new
@@ -105,7 +173,49 @@ namespace Backend.Controllers
                 subAdmin.Name,
                 subAdmin.Email,
                 subAdmin.Phone,
-                Roles = subAdmin.RolesList
+                UserType = "subadmin",
+                Roles = subAdmin.RolesList,
+                AccessibleTabs = accessibleTabs,
+                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
+            };
+            return Ok(result);
+        }
+
+        [HttpPut("{id}/roles")]
+        public async Task<IActionResult> UpdateSubAdminRoles(Guid id, [FromBody] List<string> roles)
+        {
+            var subAdmin = await _context.SubAdmins.FindAsync(id);
+            if (subAdmin == null) return NotFound();
+
+            subAdmin.RolesList = roles ?? new List<string>();
+            await _context.SaveChangesAsync();
+            
+            // Fetch the actual Role objects to get accessible tabs
+            var roleIds = subAdmin.RolesList;
+            var assignedRoles = new List<Role>();
+            var accessibleTabs = new List<string>();
+
+            if (roleIds.Any())
+            {
+                assignedRoles = await _context.Roles
+                    .Where(r => roleIds.Contains(r.Id.ToString()))
+                    .ToListAsync();
+
+                // Extract all tabs from assigned roles
+                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+            }
+            
+            // Return API format
+            var result = new
+            {
+                subAdmin.Id,
+                subAdmin.Name,
+                subAdmin.Email,
+                subAdmin.Phone,
+                UserType = "subadmin",
+                Roles = subAdmin.RolesList,
+                AccessibleTabs = accessibleTabs,
+                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
             };
             return Ok(result);
         }
@@ -130,6 +240,27 @@ namespace Backend.Controllers
             if (subAdmin == null)
                 return Unauthorized(new { message = "Invalid credentials" });
 
+            // Fetch the actual Role objects to get accessible tabs
+            var roleIds = subAdmin.RolesList;
+            var assignedRoles = new List<Role>();
+            var accessibleTabs = new List<string>();
+
+            if (roleIds.Any())
+            {
+                assignedRoles = await _context.Roles
+                    .Where(r => roleIds.Contains(r.Id.ToString()))
+                    .ToListAsync();
+
+                // Extract all tabs from assigned roles
+                foreach (var role in assignedRoles)
+                {
+                    accessibleTabs.AddRange(role.Tabs);
+                }
+                
+                // Remove duplicates
+                accessibleTabs = accessibleTabs.Distinct().ToList();
+            }
+
             var token = GenerateJwtToken(subAdmin.Id.ToString());
 
             return Ok(new
@@ -141,7 +272,10 @@ namespace Backend.Controllers
                     subAdmin.Name,
                     subAdmin.Email,
                     subAdmin.Phone,
-                    Roles = subAdmin.RolesList
+                    UserType = "subadmin",
+                    Roles = subAdmin.RolesList,
+                    AccessibleTabs = accessibleTabs,
+                    AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
                 }
             });
         }
@@ -163,6 +297,21 @@ namespace Backend.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            // Fetch the actual Role objects to get accessible tabs
+            var roleIds = subAdmin.RolesList;
+            var assignedRoles = new List<Role>();
+            var accessibleTabs = new List<string>();
+
+            if (roleIds.Any())
+            {
+                assignedRoles = await _context.Roles
+                    .Where(r => roleIds.Contains(r.Id.ToString()))
+                    .ToListAsync();
+
+                // Extract all tabs from assigned roles
+                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+            }
+
             // Return API format
             var result = new
             {
@@ -170,7 +319,10 @@ namespace Backend.Controllers
                 subAdmin.Name,
                 subAdmin.Email,
                 subAdmin.Phone,
-                Roles = subAdmin.RolesList
+                UserType = "subadmin",
+                Roles = subAdmin.RolesList,
+                AccessibleTabs = accessibleTabs,
+                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
             };
             return Ok(result);
         }
@@ -189,6 +341,21 @@ namespace Backend.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            // Fetch the actual Role objects to get accessible tabs
+            var roleIds = subAdmin.RolesList;
+            var assignedRoles = new List<Role>();
+            var accessibleTabs = new List<string>();
+
+            if (roleIds.Any())
+            {
+                assignedRoles = await _context.Roles
+                    .Where(r => roleIds.Contains(r.Id.ToString()))
+                    .ToListAsync();
+
+                // Extract all tabs from assigned roles
+                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+            }
+
             // Return API format
             var result = new
             {
@@ -196,7 +363,10 @@ namespace Backend.Controllers
                 subAdmin.Name,
                 subAdmin.Email,
                 subAdmin.Phone,
-                Roles = subAdmin.RolesList
+                UserType = "subadmin",
+                Roles = subAdmin.RolesList,
+                AccessibleTabs = accessibleTabs,
+                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
             };
             return Ok(result);
         }
