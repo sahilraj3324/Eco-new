@@ -74,7 +74,7 @@ const ProductDetails = () => {
               
               initialVariants[color] = {
                 ...normalizedVariant,
-                quantity: parseInt(data.moq) || 1
+                quantity: 0  // Start with 0 quantity instead of MOQ
               };
             }
           });
@@ -98,20 +98,48 @@ const ProductDetails = () => {
       const currentVariant = prev[color];
       if (!currentVariant) return prev;
 
-      // Find the exact variant to get its stock
+      // Find the exact variant to get its stock and MOQ
       const exactVariant = product.variants?.find(v => 
         (v.color || v.Color) === color && (v.size || v.Size) === selectedSize
       );
       
       const maxStock = parseInt(exactVariant?.stock || exactVariant?.Stock) || 999;
-      const currentQuantity = parseInt(currentVariant.quantity) || 1;
-      const newQuantity = currentQuantity + change;
+      const currentQuantity = parseInt(currentVariant.quantity) || 0;
+      const moq = parseInt(product.moq) || 1;
+      
+      let newQuantity;
+      
+      if (change > 0) {
+        // Increasing quantity
+        if (currentQuantity === 0) {
+          // If quantity is 0, jump directly to MOQ
+          newQuantity = moq;
+        } else {
+          // Normal increment
+          newQuantity = currentQuantity + change;
+        }
+      } else {
+        // Decreasing quantity
+        if (currentQuantity === moq) {
+          // If at MOQ, jump to 0
+          newQuantity = 0;
+        } else if (currentQuantity > moq) {
+          // Normal decrement but not below MOQ
+          newQuantity = Math.max(moq, currentQuantity + change);
+        } else {
+          // Should not happen, but keep current quantity
+          newQuantity = currentQuantity;
+        }
+      }
+      
+      // Ensure we don't exceed max stock
+      newQuantity = Math.min(maxStock, newQuantity);
 
       return {
         ...prev,
         [color]: {
           ...currentVariant,
-          quantity: Math.max(1, Math.min(maxStock, newQuantity)),
+          quantity: newQuantity,
         }
       };
     });
@@ -142,7 +170,7 @@ const ProductDetails = () => {
         };
         updatedVariants[color] = {
           ...normalizedVariant,
-          quantity: selectedVariants[color]?.quantity || parseInt(product.moq) || 1
+          quantity: selectedVariants[color]?.quantity || 0  // Start with 0 instead of MOQ
         };
       }
     });
@@ -461,7 +489,7 @@ const ProductDetails = () => {
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => handleQuantityChange(color, -1)} 
-                        disabled={!isValidVariant || currentQuantity <= 1}
+                        disabled={!isValidVariant || currentQuantity === 0}
                         className="w-8 h-8 bg-white border border-gray-300 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 font-semibold"
                       >
                         −
