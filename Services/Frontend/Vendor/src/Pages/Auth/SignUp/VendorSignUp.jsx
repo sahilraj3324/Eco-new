@@ -21,7 +21,7 @@ const VendorSignUp = () => {
     address: "",
     userType: "vendor",
     gstnumber: "",
-    pincode:0,
+    pincode:"",
     hnscode: "",
     profile_picture:"",
 

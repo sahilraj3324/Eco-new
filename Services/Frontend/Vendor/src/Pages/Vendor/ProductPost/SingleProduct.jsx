@@ -3,6 +3,10 @@ import axios from "axios";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../../Firebase/firebase";
 import { v4 as uuidv4 } from "uuid";
+import { 
+  Plus, Minus, Upload, Image, X, Check, AlertCircle, Loader2, 
+  Package, Tag, Palette, Ruler, Shirt, Eye, Save 
+} from "lucide-react";
 
 const SingleProduct = () => {
   const [sellerId, setSellerId] = useState("");
@@ -331,457 +335,586 @@ const SingleProduct = () => {
       setLoading(false);
     }
   };
-  
-
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8 flex justify-center">
-      <div className="w-full max-w-6xl">
-        <form onSubmit={handleSubmit}>
-          <div className="bg-white rounded-xl shadow-md p-6 md:p-8 mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-start mb-5 text-gray-500">
-              Add Single Product To Your Catalogue
-            </h2>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Header */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+            <div className="text-center mb-6">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Add New Product</h2>
+              <p className="text-red-600 font-semibold">Please Fill All Product Details Field Carefully</p>
+            </div>
 
-            {/* Category & Subcategory */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <select
-                  name="category"
-                  value={information.category}
-                  onChange={handleChange}
-                  className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-                >
-                  <option value="">Select Category</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.categoryName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <select
-                  name="subcategory"
-                  value={information.subcategory}
-                  onChange={handleChange}
-                  className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-                  disabled={!information.category || loadingSubcategories}
-                >
-                  <option value="">Select Subcategory</option>
-                  {loadingSubcategories ? (
-                    <option disabled>Loading subcategories...</option>
-                  ) : subcategories.length === 0 ? (
-                    <option disabled>No subcategories available</option>
+            {/* Message Display */}
+            {message && (
+              <div className={`mb-6 p-4 rounded-xl ${
+                message.includes('✅') 
+                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                <div className="flex items-center">
+                  {message.includes('✅') ? (
+                    <Check className="h-5 w-5 mr-2" />
                   ) : (
-                    subcategories.map((subcategory) => (
-                      <option key={subcategory.id} value={subcategory.id}>
-                        {subcategory.subCategoryName}
-                      </option>
-                    ))
+                    <AlertCircle className="h-5 w-5 mr-2" />
                   )}
-                </select>
-                {message && message !== "" && (
-                  <p className="text-sm text-red-500 mt-1">{message}</p>
-                )}
+                  <span className="font-medium">{message}</span>
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* Basic Information */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+            <div className="flex items-center mb-6">
+              <Package className="h-6 w-6 text-blue-600 mr-3" />
+              <h3 className="text-2xl font-bold text-gray-900">Basic Information</h3>
             </div>
 
-            {/* GST & HSN */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <select
-                name="gst"
-                value={information.gst}
-                onChange={handleChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-              >
-                <option value="">Select GST</option>
-                <option value="5%">5%</option>
-                <option value="12%">12%</option>
-              </select>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={information.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Enter product name"
+                    required
+                  />
+                </div>
 
-              <select
-                name="hsn1"
-                value={information.hsn1}
-                onChange={handleChange}
-                className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-              >
-                <option value="">Select HSN Code</option>
-                <option value="6109">6109 - T-shirts</option>
-                <option value="6204">6204 - Women's Garments</option>
-                <option value="6110">6110 - Sweaters</option>
-                <option value="6403">6403 - Footwear</option>
-              </select>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                  <textarea
+                    name="description"
+                    value={information.description}
+                    onChange={handleChange}
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Enter product description"
+                  />
+                </div>
 
-            {/* Sizes & Colors */}
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold mb-4">Product Variants</h3>
-              
-              {/* Add Color Input */}
-              <div className="mb-6">
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">Add Color</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={newColor}
-                        onChange={(e) => setNewColor(e.target.value)}
-                        onFocus={() => setShowColorPicker(true)}
-                        className="p-2 border rounded w-full"
-                        placeholder="Select or enter color name"
-                      />
-                      {showColorPicker && (
-                        <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg p-4">
-                          <div className="grid grid-cols-3 gap-2">
-                            {colorPalette.map((color) => (
-                              <button
-                                key={color.name}
-                                type="button"
-                                onClick={() => handleAddColor(color.name, color.value)}
-                                className="flex items-center gap-2 p-2 rounded hover:bg-gray-100"
-                              >
-                                <div
-                                  className="w-6 h-6 rounded-full border"
-                                  style={{ backgroundColor: color.value }}
-                                />
-                                <span>{color.name}</span>
-                              </button>
-                            ))}
-                          </div>
-                          <div className="mt-4 pt-4 border-t">
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={newColor}
-                                onChange={(e) => setNewColor(e.target.value)}
-                                className="flex-1 p-2 border rounded"
-                                placeholder="Or enter custom color name"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleAddColor(newColor, "#000000")}
-                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                              >
-                                Add Custom
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Price *</label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={information.price}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="0"
+                      min="0"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Brand *</label>
+                    <input
+                      type="text"
+                      name="brand"
+                      value={information.brand}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Enter brand name"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Color Variants */}
-              {information.variants.length > 0 && (
-                <div className="space-y-6">
-                  {information.variants.map((variant, colorIndex) => (
-                    <div key={colorIndex} className="border p-4 rounded-lg bg-gray-50">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-6 h-6 rounded-full border"
-                            style={{ backgroundColor: variant.colorValue || variant.color.toLowerCase() }}
-                          />
-                          <h4 className="text-lg font-semibold">{variant.color}</h4>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveColor(colorIndex)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Remove
-                        </button>
-                      </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                    <select
+                      name="category"
+                      value={information.category}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.categoryName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                      {/* Size Selection */}
-                      <div className="mb-4">
-                        <h5 className="font-medium mb-2">Select Sizes</h5>
-                        <div className="flex gap-4">
-                          {["S", "M", "L", "XL", "XXL"].map((size) => (
-                            <label key={size} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                checked={variant.sizes.some(s => s.size === size)}
-                                onChange={(e) => handleSizeChange(colorIndex, size, e.target.checked)}
-                                className="mr-2"
-                              />
-                              {size}
-                            </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Subcategory *</label>
+                    <select
+                      name="subcategory"
+                      value={information.subcategory}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      disabled={!information.category || loadingSubcategories}
+                    >
+                      <option value="">Select Subcategory</option>
+                      {loadingSubcategories ? (
+                        <option disabled>Loading...</option>
+                      ) : subcategories.length === 0 ? (
+                        <option disabled>No subcategories available</option>
+                      ) : (
+                        subcategories.map((subcategory) => (
+                          <option key={subcategory.id} value={subcategory.id}>
+                            {subcategory.subCategoryName}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">GST *</label>
+                    <select
+                      name="gst"
+                      value={information.gst}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="">Select GST</option>
+                      <option value="5%">5%</option>
+                      <option value="12%">12%</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">HSN Code *</label>
+                    <select
+                      name="hsn1"
+                      value={information.hsn1}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="">Select HSN Code</option>
+                      <option value="6109">6109 - T-shirts</option>
+                      <option value="6204">6204 - Women's Garments</option>
+                      <option value="6110">6110 - Sweaters</option>
+                      <option value="6403">6403 - Footwear</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Product Variants */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+            <div className="flex items-center mb-6">
+              <Palette className="h-6 w-6 text-purple-600 mr-3" />
+              <h3 className="text-2xl font-bold text-gray-900">Product Variants</h3>
+            </div>
+
+            {/* Add Color */}
+            <div className="mb-8">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Add Color Variant *</label>
+              <div className="flex gap-4 items-end">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    onFocus={() => setShowColorPicker(true)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Select or enter color name"
+                  />
+                  
+                  {showColorPicker && (
+                    <div className="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-xl shadow-lg p-6">
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        {colorPalette.map((color) => (
+                          <button
+                            key={color.name}
+                            type="button"
+                            onClick={() => handleAddColor(color.name, color.value)}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <div
+                              className="w-6 h-6 rounded-full border border-gray-300"
+                              style={{ backgroundColor: color.value }}
+                            />
+                            <span className="text-sm font-medium">{color.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={newColor}
+                            onChange={(e) => setNewColor(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Custom color name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddColor(newColor, "#000000")}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => setShowColorPicker(false)}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add Color
+                </button>
+              </div>
+            </div>
+
+            {/* Color Variants Display */}
+            {information.variants.length > 0 && (
+              <div className="space-y-6">
+                {information.variants.map((variant, colorIndex) => (
+                  <div key={colorIndex} className="border border-gray-200 rounded-xl p-6 bg-gray-50">
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-8 h-8 rounded-full border-2 border-gray-300"
+                          style={{ backgroundColor: variant.colorValue || variant.color.toLowerCase() }}
+                        />
+                        <h4 className="text-xl font-semibold text-gray-900">{variant.color}</h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveColor(colorIndex)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    {/* Size Selection */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Available Sizes</label>
+                      <div className="flex flex-wrap gap-3">
+                        {["XS", "S", "M", "L", "XL", "XXL", "3XL"].map((size) => (
+                          <label key={size} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={variant.sizes.some(s => s.size === size)}
+                              onChange={(e) => handleSizeChange(colorIndex, size, e.target.checked)}
+                              className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">{size}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Size Details */}
+                    {variant.sizes.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-4">Size Details</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {variant.sizes.map((sizeVariant, sizeIndex) => (
+                            <div key={sizeIndex} className="bg-white rounded-lg border border-gray-200 p-4">
+                              <div className="mb-3">
+                                <div className="flex items-center">
+                                  <Ruler className="h-4 w-4 text-gray-500 mr-2" />
+                                  <span className="font-medium text-gray-900">Size {sizeVariant.size}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg)</label>
+                                  <input
+                                    type="text"
+                                    value={sizeVariant.weight || ""}
+                                    onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'weight', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    placeholder="0.5"
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Stock *</label>
+                                  <input
+                                    type="number"
+                                    value={sizeVariant.stock || ""}
+                                    onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'stock', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    placeholder="100"
+                                    min="0"
+                                    required
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Price *</label>
+                                  <input
+                                    type="number"
+                                    value={sizeVariant.price || ""}
+                                    onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'price', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    placeholder="299"
+                                    min="0"
+                                    required
+                                  />
+                                </div>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-                      {/* Size Details */}
-                      {variant.sizes.length > 0 && (
-                        <div className="space-y-4">
-                          <h5 className="font-medium">Size Details</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {variant.sizes.map((sizeVariant, sizeIndex) => (
-                              <div key={sizeIndex} className="bg-white rounded border p-3">
-                                <div className="mb-2">
-                                  <label className="block text-sm font-medium">Size {sizeVariant.size}</label>
-                                </div>
-                                <div className="space-y-2">
-                                  <div>
-                                    <label className="block text-sm text-gray-600">Weight (kg)</label>
-                                    <input
-                                      type="text"
-                                      value={sizeVariant.weight || ""}
-                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'weight', e.target.value)}
-                                      className="p-2 border rounded w-full"
-                                      placeholder="Enter weight"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-sm text-gray-600">Stock</label>
-                                    <input
-                                      type="number"
-                                      value={sizeVariant.stock || ""}
-                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'stock', e.target.value)}
-                                      className="p-2 border rounded w-full"
-                                      placeholder="Enter stock"
-                                      min="0"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-sm text-gray-600">Price</label>
-                                    <input
-                                      type="number"
-                                      value={sizeVariant.price || ""}
-                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'price', e.target.value)}
-                                      className="p-2 border rounded w-full"
-                                      placeholder="Enter Price"
-                                      min="0"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* Additional Details */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+            <div className="flex items-center mb-6">
+              <Shirt className="h-6 w-6 text-green-600 mr-3" />
+              <h3 className="text-2xl font-bold text-gray-900">Additional Details</h3>
             </div>
 
-            {/* Other Inputs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Material *</label>
                 <input
-                  className="p-3 rounded-lg bg-gray-100 w-full "
-                  name="name"
-                  placeholder="Product Name"
-                  value={information.name}
-                  onChange={handleChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full "
-                  name="weight"
-                  placeholder="Weight (kg)"
-                  value={information.weight}
-                  onChange={handleChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full "
-                  name="moq"
-                  placeholder="MOQ (packs)"
-                  value={information.moq}
-                  onChange={handleChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full "
-                  name="piecesPerPack"
-                  placeholder="Pieces per Pack"
-                  value={information.piecesPerPack}
-                  onChange={handleChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full "
-                  name="minOrderQuantity"
-                  placeholder="Minimum Order Quantity"
-                  value={information.minOrderQuantity}
-                  onChange={handleChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full "
+                  type="text"
                   name="material"
-                  placeholder="Fabric Material"
                   value={information.material}
                   onChange={handleChange}
-                />
-                <input
-                  className="p-3 rounded-lg bg-gray-100 w-full "
-                  name="fitShape"
-                  placeholder="Fit Shape"
-                  value={information.fitShape}
-                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="e.g., Cotton, Polyester"
                 />
               </div>
 
-              <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fit Shape *</label>
+                <input
+                  type="text"
+                  name="fitShape"
+                  value={information.fitShape}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="e.g., Regular, Slim, Loose"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Neck Type *</label>
                 <select
-                  className="p-3 rounded-lg bg-gray-100 w-full "
                   name="neckType"
                   value={information.neckType}
                   onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
                   <option value="">Select Neck Type</option>
-                  <option>Round Neck</option>
-                  <option>V-Neck</option>
-                  <option>Collar</option>
-                  <option>Boat Neck</option>
+                  <option value="Round Neck">Round Neck</option>
+                  <option value="V-Neck">V-Neck</option>
+                  <option value="Collar">Collar</option>
+                  <option value="Boat Neck">Boat Neck</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Occasion *</label>
                 <select
-                  className="p-3 rounded-lg bg-gray-100 w-full "
                   name="occasion"
                   value={information.occasion}
                   onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
                   <option value="">Select Occasion</option>
-                  <option>Casual</option>
-                  <option>Formal</option>
-                  <option>Party</option>
-                  <option>Festive</option>
+                  <option value="Casual">Casual</option>
+                  <option value="Formal">Formal</option>
+                  <option value="Party">Party</option>
+                  <option value="Sports">Sports</option>
                 </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full "
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Pattern *</label>
+                <input
+                  type="text"
                   name="pattern"
                   value={information.pattern}
                   onChange={handleChange}
-                >
-                  <option value="">Select Pattern</option>
-                  <option>Solid</option>
-                  <option>Striped</option>
-                  <option>Printed</option>
-                  <option>Checked</option>
-                </select>
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="e.g., Solid, Striped, Printed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sleeve Length *</label>
                 <select
-                  className="p-3 rounded-lg bg-gray-100 w-full "
                   name="sleeveLength"
                   value={information.sleeveLength}
                   onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
-                  <option value="">Sleeve Length</option>
-                  <option>Sleeveless</option>
-                  <option>Short Sleeve</option>
-                  <option>Half Sleeve</option>
-                  <option>Full Sleeve</option>
+                  <option value="">Select Sleeve Length</option>
+                  <option value="Short Sleeve">Short Sleeve</option>
+                  <option value="Long Sleeve">Long Sleeve</option>
+                  <option value="Sleeveless">Sleeveless</option>
+                  <option value="3/4 Sleeve">3/4 Sleeve</option>
                 </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full "
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Order Quantity (MOQ) *</label>
+                <input
+                  type="text"
+                  name="moq"
+                  value={information.moq}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="Minimum order quantity"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Pieces per Pack *</label>
+                <input
+                  type="text"
+                  name="piecesPerPack"
+                  value={information.piecesPerPack}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="Number of pieces"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ships In * </label>
+                <input
+                  type="text"
                   name="shipsIn"
                   value={information.shipsIn}
                   onChange={handleChange}
-                >
-                  <option value="">Ships In (Days)</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                </select>
-                <select
-                  className="p-3 rounded-lg bg-gray-100 w-full "
-                  name="brand"
-                  value={information.brand}
-                  onChange={handleChange}
-                >
-                  <option value="">Select Brand</option>
-                  <option>Brand A</option>
-                  <option>Brand B</option>
-                  <option>Brand C</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Price, Stock, Description */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <input
-                className="p-3 rounded-lg bg-gray-100 w-full "
-                name="price"
-                type="number"
-                placeholder="Price (INR)"
-                value={information.price}
-                onChange={handleChange}
-              />
-              <input
-                className="p-3 rounded-lg bg-gray-100 w-full "
-                name="stock"
-                type="number"
-                placeholder="Stock"
-                value={information.stock}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="mb-6">
-              <textarea
-                className="p-3 rounded-lg bg-gray-100 w-full "
-                name="description"
-                placeholder="Description"
-                value={information.description}
-                onChange={handleChange}
-              ></textarea>
-            </div>
-
-            {/* Main Image Upload */}
-            <div className="mb-6">
-              <label className="block text-gray-600 mb-2">Main Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleMainImageUpload}
-                className="w-full p-3 rounded-lg bg-gray-100"
-              />
-              {mainImageFile && (
-                <img
-                  src={URL.createObjectURL(mainImageFile)}
-                  alt="Main"
-                  className="w-32 h-40 object-cover rounded mx-auto mt-4"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="e.g., 2-3 days"
                 />
-              )}
-            </div>
-
-            {/* Additional Images */}
-            <div className="mb-6">
-              <label className="block text-gray-600 mb-2">Additional Images</label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="w-full p-3 rounded-lg bg-gray-100"
-              />
-              <div className="flex flex-wrap gap-4 mt-4">
-                {uploadedImages.map((img, i) => (
-                  <img
-                    key={i}
-                    src={URL.createObjectURL(img)}
-                    alt={`Upload ${i}`}
-                    className="w-20 h-24 object-cover rounded "
-                  />
-                ))}
               </div>
             </div>
+          </div>
 
-            {/* Submit */}
-            {message && (
-              <p className="text-center text-xl font-bold mb-6">{message}</p>
-            )}
+          {/* Image Upload */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+            <div className="flex items-center mb-6">
+              <Image className="h-6 w-6 text-orange-600 mr-3" />
+              <h3 className="text-2xl font-bold text-gray-900">Product Images *</h3>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Main Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Main Product Image *</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <label className="cursor-pointer inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <Upload className="h-5 w-5 mr-2" />
+                    Choose Main Image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleMainImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-sm text-gray-500 mt-2">PNG, JPG up to 1MB</p>
+                  
+                  {mainImageFile && (
+                    <div className="mt-4">
+                      <img
+                        src={URL.createObjectURL(mainImageFile)}
+                        alt="Main preview"
+                        className="h-32 w-32 object-cover rounded-lg mx-auto border border-gray-200"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Additional Images */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Additional Images *</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <label className="cursor-pointer inline-flex items-center px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                    <Upload className="h-5 w-5 mr-2" />
+                    Choose Images
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-sm text-gray-500 mt-2">Multiple images allowed</p>
+                  
+                  {uploadedImages.length > 0 && (
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      {uploadedImages.slice(0, 6).map((file, index) => (
+                        <img
+                          key={index}
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+                        />
+                      ))}
+                      {uploadedImages.length > 6 && (
+                        <div className="h-20 w-20 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-500">
+                          +{uploadedImages.length - 6}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
             <div className="text-center">
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-cyan-500 text-white p-3 rounded-full shadow-md hover:bg-blue-700 transition-all duration-300"
+                className="inline-flex items-center px-8 py-4 bg-green-600 text-white text-lg font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[200px]"
               >
-                {loading ? "Submitting..." : "Add Product"}
+                {loading ? (
+                  <>
+                    <Loader2 className="h-6 w-6 mr-3 animate-spin" />
+                    Adding Product...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-6 w-6 mr-3" />
+                    Add Product
+                  </>
+                )}
               </button>
+              
+              <p className="text-sm text-gray-500 mt-3">
+                Your product will be submitted for review and approval
+              </p>
             </div>
           </div>
         </form>
