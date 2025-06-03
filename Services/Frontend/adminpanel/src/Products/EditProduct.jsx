@@ -127,9 +127,21 @@ export default function EditProduct() {
           // Ensure these fields are strings for the form
           gst: data.gst || '5%',
           top: String(data.top || 'false'),
-          trending: String(data.trending || 'false')
+          trending: String(data.trending || 'false'),
+          // Ensure sellerId is preserved (handle both case variations)
+          sellerId: data.sellerId || data.SellerId || 'default-seller',
+          // Store the original names for later conversion back to names when submitting
+          originalCategoryName: data.category,
+          originalSubcategoryName: data.subcategory,
+          // Set flag to indicate this is initial load
+          isInitialLoad: true
         }
         
+        console.log('Processed product data:', processedProduct)
+        console.log('Original category name:', data.category)
+        console.log('Original subcategory name:', data.subcategory)
+        console.log('Current product category value:', processedProduct.category)
+        console.log('Current product subcategory value:', processedProduct.subcategory)
         setProduct(processedProduct)
       } catch (err) {
         console.error('Error fetching product:', err)
@@ -147,13 +159,38 @@ export default function EditProduct() {
     }
   }, [id])
 
-  // Fetch categories when component loads
+  // Combined effect to fetch categories and then process product
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesAndProcessProduct = async () => {
       try {
         setLoadingCategories(true)
-        const data = await api.category.getAll()
-        setCategories(data)
+        const categoriesData = await api.category.getAll()
+        setCategories(categoriesData)
+        
+        // If product is loaded and we have category names, convert them to IDs
+        if (product.isInitialLoad && product.originalCategoryName && categoriesData.length > 0) {
+          console.log('Converting category name to ID immediately after categories load')
+          console.log('Looking for category:', product.originalCategoryName)
+          console.log('Available categories:', categoriesData.map(c => ({ id: c.id, name: c.categoryName })))
+          
+          const matchingCategory = categoriesData.find(cat => cat.categoryName === product.originalCategoryName)
+          if (matchingCategory) {
+            console.log('Found matching category immediately:', matchingCategory)
+            setProduct(prev => ({
+              ...prev,
+              category: matchingCategory.id,
+              categoryIdResolved: true,
+              isInitialLoad: false
+            }))
+          } else {
+            console.warn('No matching category found immediately for:', product.originalCategoryName)
+            // Keep the original name if no match found
+            setProduct(prev => ({
+              ...prev,
+              isInitialLoad: false
+            }))
+          }
+        }
       } catch (err) {
         console.error('Error fetching categories:', err)
         setError('Failed to load categories')
@@ -162,15 +199,49 @@ export default function EditProduct() {
       }
     }
 
-    fetchCategories()
-  }, [])
+    fetchCategoriesAndProcessProduct()
+  }, [product.isInitialLoad, product.originalCategoryName])
+
+  // Convert subcategory name to ID after subcategories are loaded
+  useEffect(() => {
+    if (subcategories.length > 0 && product.originalSubcategoryName && !product.subcategoryIdResolved) {
+      console.log('Converting subcategory name to ID:', product.originalSubcategoryName);
+      console.log('Available subcategories:', subcategories.map(sc => ({ id: sc.id, name: sc.subCategoryName })));
+      
+      const matchingSubcategory = subcategories.find(subcat => subcat.subCategoryName === product.originalSubcategoryName)
+      if (matchingSubcategory) {
+        console.log('Found matching subcategory:', matchingSubcategory);
+        setProduct(prev => ({
+          ...prev,
+          subcategory: matchingSubcategory.id,
+          subcategoryIdResolved: true
+        }))
+      } else {
+        console.warn('No matching subcategory found for:', product.originalSubcategoryName);
+      }
+    }
+  }, [subcategories, product.originalSubcategoryName, product.subcategoryIdResolved])
 
   // Fetch subcategories when category changes
   useEffect(() => {
     const fetchSubcategories = async () => {
       if (!product.category) {
+        console.log('No category set, clearing subcategories');
         setSubcategories([])
         return
+      }
+
+      console.log('Fetching subcategories for category:', product.category);
+      console.log('Category type:', typeof product.category);
+      
+      // Check if it's a valid GUID
+      const isValidGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product.category);
+      console.log('Is it a GUID?', isValidGuid);
+
+      // Only fetch subcategories if we have a valid GUID
+      if (!isValidGuid) {
+        console.log('Category is not a valid GUID, skipping subcategory fetch');
+        return;
       }
 
       try {
@@ -322,15 +393,32 @@ export default function EditProduct() {
 
       // Flatten variants for API (similar to AddProduct)
       const flattenedVariants = product.variants.flatMap(variant => 
-        variant.sizes.map(size => ({
-          id: uuidv4(),
-          color: variant.color,
-          size: size.size,
-          weight: size.weight || '',
-          stock: parseInt(size.stock) || 0,
-          price: parseFloat(size.price) || 0
-        }))
+        variant.sizes.map(size => {
+          const stockValue = parseInt(size.stock) || 0
+          const priceValue = parseFloat(size.price) || 0
+          
+          console.log(`Processing variant: ${variant.color} ${size.size} - stock: ${size.stock} -> ${stockValue} (${typeof stockValue}), price: ${size.price} -> ${priceValue} (${typeof priceValue})`)
+          
+          return {
+            id: uuidv4(),
+            color: variant.color || '',
+            size: size.size || '',
+            weight: size.weight || '',
+            stock: String(stockValue),  // Convert to string as backend expects
+            price: priceValue   // Keep as number for price
+          }
+        })
       )
+
+      // Validate flattened variants
+      console.log('Flattened variants:', flattenedVariants)
+      flattenedVariants.forEach((variant, index) => {
+        console.log(`Variant ${index}:`, {
+          ...variant,
+          stockType: typeof variant.stock,
+          priceType: typeof variant.price
+        })
+      })
 
       // Calculate total stock
       const totalStock = flattenedVariants.reduce((sum, variant) => {
@@ -344,35 +432,56 @@ export default function EditProduct() {
       const productData = {
         id: id,
         name: product.name,
-        description: product.description,
+        description: product.description || '',
         price: parseFloat(product.price) || 0,
         stock: totalStock,
-        sellerId: product.sellerId,
-        status: product.status,
-        category: selectedCategory ? selectedCategory.categoryName : product.category,
-        subcategory: selectedSubcategory ? selectedSubcategory.subCategoryName : product.subcategory,
-        brand: product.brand,
-        material: product.material,
-        gst: product.gst,
-        hsn1: product.hsn1,
-        moq: product.moq,
-        piecesPerPack: product.piecesPerPack,
-        fitShape: product.fitShape,
-        neckType: product.neckType,
-        occasion: product.occasion,
-        pattern: product.pattern,
-        sleeveLength: product.sleeveLength,
-        shipsIn: product.shipsIn,
-        mainImage: mainImageUrl,
+        sellerId: product.sellerId || 'default-seller',
+        status: product.status || 'In Review',
+        category: selectedCategory ? selectedCategory.categoryName : (product.originalCategoryName || product.category || ''),
+        subcategory: selectedSubcategory ? selectedSubcategory.subCategoryName : (product.originalSubcategoryName || product.subcategory || ''),
+        brand: product.brand || '',
+        material: product.material || '',
+        gst: product.gst || '5%',
+        hsn1: product.hsn1 || '',
+        moq: product.moq || '',
+        piecesPerPack: product.piecesPerPack || '',
+        fitShape: product.fitShape || '',
+        neckType: product.neckType || '',
+        occasion: product.occasion || '',
+        pattern: product.pattern || '',
+        sleeveLength: product.sleeveLength || '',
+        shipsIn: product.shipsIn || '',
+        mainImage: mainImageUrl || '',
         imageUrls: newImageUrls,
         imageUrlsJson: JSON.stringify(newImageUrls),
         variants: flattenedVariants,
         variantsJson: JSON.stringify(flattenedVariants),
-        top: product.top,
-        trending: product.trending
+        top: product.top === 'true' ? 'true' : 'false',
+        trending: product.trending === 'true' ? 'true' : 'false'
+      }
+      
+      // Validate required fields before sending
+      if (!productData.name || productData.name.trim() === '') {
+        setError('❌ Product name is required');
+        return;
+      }
+      
+      if (!productData.sellerId || productData.sellerId.trim() === '') {
+        setError('❌ Seller ID is required');
+        return;
       }
       
       console.log('Sending product data:', productData)
+      console.log('Product data keys:', Object.keys(productData))
+      console.log('Product data structure:', {
+        id: productData.id,
+        name: productData.name,
+        category: productData.category,
+        subcategory: productData.subcategory,
+        variants: productData.variants,
+        variantsJson: productData.variantsJson,
+        sellerId: productData.sellerId
+      })
       
       await api.product.update(id, productData)
       
@@ -384,7 +493,31 @@ export default function EditProduct() {
       }, 2000)
     } catch (err) {
       console.error('Error updating product:', err)
-      setError(`❌ Failed to update product: ${err.message || 'Unknown error'}`)
+      
+      // Extract detailed error information
+      let errorMessage = 'Unknown error'
+      if (err.response && err.response.data) {
+        console.error('Full error response:', err.response.data)
+        
+        if (err.response.data.errors) {
+          console.error('Validation errors:', err.response.data.errors)
+          
+          // Format validation errors for display
+          const validationErrors = Object.entries(err.response.data.errors)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join('; ')
+          
+          errorMessage = `Validation errors: ${validationErrors}`
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message
+        } else if (err.response.data.title) {
+          errorMessage = err.response.data.title
+        }
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      
+      setError(`❌ Failed to update product: ${errorMessage}`)
     } finally {
       setSaving(false)
       setImageUploading(false)
@@ -397,14 +530,108 @@ export default function EditProduct() {
       setSaving(true)
       setError(null)
       const newValue = product[field] === 'true' ? 'false' : 'true'
-      const updatedProduct = { ...product, [field]: newValue }
+      
+      // Flatten variants for API
+      const flattenedVariants = product.variants.flatMap(variant => 
+        variant.sizes.map(size => {
+          const stockValue = parseInt(size.stock) || 0
+          const priceValue = parseFloat(size.price) || 0
+          
+          console.log(`Processing variant: ${variant.color} ${size.size} - stock: ${size.stock} -> ${stockValue} (${typeof stockValue}), price: ${size.price} -> ${priceValue} (${typeof priceValue})`)
+          
+          return {
+            id: uuidv4(),
+            color: variant.color || '',
+            size: size.size || '',
+            weight: size.weight || '',
+            stock: String(stockValue),  // Convert to string as backend expects
+            price: priceValue   // Keep as number for price
+          }
+        })
+      )
+
+      // Validate flattened variants
+      console.log('Flattened variants:', flattenedVariants)
+      flattenedVariants.forEach((variant, index) => {
+        console.log(`Variant ${index}:`, {
+          ...variant,
+          stockType: typeof variant.stock,
+          priceType: typeof variant.price
+        })
+      })
+
+      // Calculate total stock
+      const totalStock = flattenedVariants.reduce((sum, variant) => {
+        return sum + (parseInt(variant.stock) || 0)
+      }, 0)
+
+      // Find category and subcategory names from IDs
+      const selectedCategory = categories.find(cat => cat.id === product.category)
+      const selectedSubcategory = subcategories.find(subcat => subcat.id === product.subcategory)
+
+      const updatedProduct = {
+        id: id,
+        name: product.name,
+        description: product.description || '',
+        price: parseFloat(product.price) || 0,
+        stock: totalStock,
+        sellerId: product.sellerId || 'default-seller',
+        status: product.status || 'In Review',
+        category: selectedCategory ? selectedCategory.categoryName : (product.originalCategoryName || product.category || ''),
+        subcategory: selectedSubcategory ? selectedSubcategory.subCategoryName : (product.originalSubcategoryName || product.subcategory || ''),
+        brand: product.brand || '',
+        material: product.material || '',
+        gst: product.gst || '5%',
+        hsn1: product.hsn1 || '',
+        moq: product.moq || '',
+        piecesPerPack: product.piecesPerPack || '',
+        fitShape: product.fitShape || '',
+        neckType: product.neckType || '',
+        occasion: product.occasion || '',
+        pattern: product.pattern || '',
+        sleeveLength: product.sleeveLength || '',
+        shipsIn: product.shipsIn || '',
+        mainImage: product.mainImage || '',
+        imageUrls: product.imageUrls,
+        imageUrlsJson: JSON.stringify(product.imageUrls),
+        variants: flattenedVariants,
+        variantsJson: JSON.stringify(flattenedVariants),
+        [field]: newValue,
+        top: field === 'top' ? newValue : (product.top === 'true' ? 'true' : 'false'),
+        trending: field === 'trending' ? newValue : (product.trending === 'true' ? 'true' : 'false')
+      }
       
       await api.product.update(id, updatedProduct)
-      setProduct(updatedProduct)
+      setProduct(prev => ({ ...prev, [field]: newValue }))
       setSuccessMessage(`✅ Product ${newValue === 'true' ? 'marked as' : 'unmarked from'} ${field}`)
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
-      setError(`❌ Failed to update product: ${err.message || 'Unknown error'}`)
+      console.error('Error in toggleProductField:', err)
+      
+      // Extract detailed error information
+      let errorMessage = 'Unknown error'
+      if (err.response && err.response.data) {
+        console.error('Full error response:', err.response.data)
+        
+        if (err.response.data.errors) {
+          console.error('Validation errors:', err.response.data.errors)
+          
+          // Format validation errors for display
+          const validationErrors = Object.entries(err.response.data.errors)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join('; ')
+          
+          errorMessage = `Validation errors: ${validationErrors}`
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message
+        } else if (err.response.data.title) {
+          errorMessage = err.response.data.title
+        }
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      
+      setError(`❌ Failed to update product: ${errorMessage}`)
     } finally {
       setSaving(false)
     }

@@ -61,7 +61,19 @@ namespace Backend
                     });
                 });
 
-                builder.Services.AddControllers();
+                // Configure JSON serialization options
+                builder.Services.ConfigureHttpJsonOptions(options =>
+                {
+                    options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+                });
+
+                builder.Services.AddControllers()
+                    .AddJsonOptions(options =>
+                    {
+                        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                    });
                 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen();

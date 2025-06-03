@@ -104,6 +104,20 @@ namespace Backend.Controllers
             if (existingProduct == null)
                 return NotFound(new { message = "Product not found." });
 
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(updatedProduct.Name))
+                return BadRequest(new { message = "Product name is required." });
+            
+            if (updatedProduct.Price < 0)
+                return BadRequest(new { message = "Product price must be greater than or equal to 0." });
+            
+            if (updatedProduct.Stock < 0)
+                return BadRequest(new { message = "Product stock must be greater than or equal to 0." });
+
+            // If SellerId is empty, keep the existing one
+            if (string.IsNullOrWhiteSpace(updatedProduct.SellerId))
+                updatedProduct.SellerId = existingProduct.SellerId;
+
             // Update fields
             existingProduct.Name = updatedProduct.Name;
             existingProduct.Description = updatedProduct.Description;
@@ -135,7 +149,15 @@ namespace Backend.Controllers
             existingProduct.VariantsJson = JsonSerializer.Serialize(updatedProduct.Variants);
 
             if (!TryValidateModel(existingProduct))
-                return BadRequest(ModelState);
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .Select(x => new { 
+                        Field = x.Key, 
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage) 
+                    });
+                return BadRequest(new { message = "Validation failed", errors = errors });
+            }
 
             await _context.SaveChangesAsync();
 

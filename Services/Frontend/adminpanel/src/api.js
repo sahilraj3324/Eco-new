@@ -131,12 +131,21 @@ export const productApi = {
   // Update a product
   update: async (id, productData) => {
     try {
+      // Ensure proper case for backend
       const dataToSend = {
         ...productData,
         Id: id // Ensure Id is uppercase to match C# model
       };
       
-      console.log('API sending data:', dataToSend);
+      console.log('API sending product update data:', dataToSend);
+      console.log('Data structure check:', {
+        hasId: !!dataToSend.Id,
+        hasName: !!dataToSend.name,
+        hasSellerId: !!dataToSend.sellerId,
+        hasVariants: !!dataToSend.variants,
+        variantsCount: dataToSend.variants?.length,
+        firstVariant: dataToSend.variants?.[0]
+      });
       
       const response = await tryBothApproaches({
         method: 'put',
@@ -144,9 +153,23 @@ export const productApi = {
         data: dataToSend,
         ...authConfig()
       });
+      
+      console.log('Product update response:', response.data);
       return response.data;
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);
+      
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Error response status:', error.response.status);
+        console.error('Error response data:', error.response.data);
+        console.error('Error response headers:', error.response.headers);
+        
+        // Log the request that failed
+        console.error('Failed request config:', error.config);
+        console.error('Failed request data:', error.config?.data);
+      }
+      
       throw error;
     }
   },
