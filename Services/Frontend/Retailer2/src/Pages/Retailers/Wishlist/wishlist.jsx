@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Heart, ShoppingCart, Trash2, ArrowRight, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const WishlistPage = () => {
   const [wishlist, setWishlist] = useState([]);
@@ -7,6 +8,7 @@ const WishlistPage = () => {
   const [isRemoving, setIsRemoving] = useState(null);
   const [isAddingToCart, setIsAddingToCart] = useState(null);
   const userId = localStorage.getItem("Id") || "dummy-user-123";
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchWishlist();
@@ -101,7 +103,10 @@ const WishlistPage = () => {
             <p className="text-gray-500 mb-6">
               Start adding items you love to your wishlist
             </p>
-            <button className="bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 px-6 rounded-lg flex items-center mx-auto">
+            <button 
+              onClick={() => navigate('/products')}
+              className="bg-pink-500 hover:bg-pink-600 text-white font-medium py-2 px-6 rounded-lg flex items-center mx-auto"
+            >
               Continue Shopping <ArrowRight className="ml-2 h-4 w-4" />
             </button>
           </div>
@@ -110,11 +115,15 @@ const WishlistPage = () => {
             {wishlist.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden group relative"
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden group relative cursor-pointer"
+                onClick={() => navigate(`/product/${item.product.id}`)}
               >
                 <div className="absolute top-3 right-3 z-10">
                   <button
-                    onClick={() => removeFromWishlist(item.id)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent card click when removing
+                      removeFromWishlist(item.id);
+                    }}
                     className="p-2 bg-white rounded-full shadow-md hover:bg-red-50 hover:text-red-500 transition-colors"
                     aria-label="Remove from wishlist"
                     disabled={isRemoving === item.id}
@@ -170,7 +179,10 @@ const WishlistPage = () => {
 
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => addToCart(item)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click when adding to cart
+                        addToCart(item);
+                      }}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center transition-colors"
                       disabled={isAddingToCart === item.id}
                     >
