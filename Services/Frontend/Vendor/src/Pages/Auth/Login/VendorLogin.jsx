@@ -43,7 +43,6 @@ const VendorLogin = () => {
       // Save data to localStorage
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("Id", response.data.seller.id);
-      localStorage.setItem("storename", response.data.seller.storename);
       localStorage.setItem("userType", response.data.seller.userType);
       localStorage.setItem("Status", response.data.seller.status);
 

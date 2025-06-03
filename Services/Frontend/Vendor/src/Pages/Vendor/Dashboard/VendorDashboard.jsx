@@ -15,6 +15,7 @@ import AddProduct from '../ProductPost/AddProduct';
 import VendorProducts from '../Inventory/VendorProducts';
 import VendorOrders from '../Order/VendorOrders';
 import AskAdmin from '../Ask/AskAdmin';
+import axios from 'axios';
 import {
   Home,
   PlusCircle,
@@ -33,6 +34,15 @@ const VendorDashboard = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
+
+  const id = localStorage.getItem('Id');
+  async function fetchUserData() {
+    const responce = await axios.get(`/api/Seller/get/${id}`)
+    const data = responce.data;
+    setName(data.storename);
+  }
+  fetchUserData();
+
   useEffect(() => {
     // Check authentication and status
        const status = localStorage.getItem('Status');
@@ -40,10 +50,20 @@ const VendorDashboard = () => {
       navigate('/vendorlogin');
       return;
     }
-
+    const id = localStorage.getItem('Id');
+  async function fetchUserData() {
+    const responce = await axios.get(`/api/Seller/get/${id}`)
+    const data = responce.data;
+    console.log(data);
+    setName(data.storename);
+  }
+  fetchUserData();
+ console.log(1234);
     const storename = localStorage.getItem('storename');
     setName(storename);
   }, [navigate]);
+
+ 
 
   const handleLogout = () => {
     // Clear all localStorage data
