@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import shirtImg from '../../assets/men shirts.png'; // Update the path if needed
 
 const NewProductsSection = () => {
@@ -11,10 +13,11 @@ const NewProductsSection = () => {
   const scroll = (direction) => {
     const { current } = scrollRef;
     if (current) {
-      current.scrollBy({
-        left: direction === 'left' ? -250 : 250,
-        behavior: 'smooth',
-      });
+      if (direction === 'left') {
+        current.scrollBy({ left: -250, behavior: 'smooth' });
+      } else {
+        current.scrollBy({ left: 250, behavior: 'smooth' });
+      }
     }
   };
 
@@ -38,61 +41,89 @@ const NewProductsSection = () => {
   }, []);
 
   return (
-    <div className="mt-6">
-      <h2 className="text-xl font-bold text-slate-700 mb-3">New Products</h2>
+    <section className="px-4 py-8 relative">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">New Products</h2>
+        <div className="w-16 h-1 bg-gradient-to-r from-green-500 to-green-600 mx-auto"></div>
+      </div>
 
       <div className="relative">
         <button
           onClick={() => scroll('left')}
           aria-label="Scroll left"
-          className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow px-2 py-1 rounded-full"
+          className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50 hover:shadow-xl transition-all duration-300 border border-gray-100 group"
         >
-          ◀
+          <ChevronLeft size={20} className="text-gray-600 group-hover:text-green-600 transition-colors duration-200" />
         </button>
         <button
           onClick={() => scroll('right')}
           aria-label="Scroll right"
-          className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow px-2 py-1 rounded-full"
+          className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-3 hover:bg-gray-50 hover:shadow-xl transition-all duration-300 border border-gray-100 group"
         >
-          ▶
+          <ChevronRight size={20} className="text-gray-600 group-hover:text-green-600 transition-colors duration-200" />
         </button>
 
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto pb-2 scroll-smooth"
+          className="flex overflow-x-auto gap-4 px-8 scroll-smooth no-scrollbar"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {loading ? (
-            <p className="px-4 py-2">Loading...</p>
+            <div className="flex justify-center items-center w-full py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-100 border-t-green-600"></div>
+              <span className="ml-3 text-gray-600 text-lg">Loading new products...</span>
+            </div>
           ) : products.length === 0 ? (
-            <p className="px-4 py-2">No products found.</p>
+            <div className="flex justify-center items-center w-full py-16">
+              <p className="text-gray-500 text-lg">No products available</p>
+            </div>
           ) : (
-            products.map((product) => (
-              <div
+            products
+            .filter((product) => product.status === "In Review" || product.status === "pending")
+            .map((product) => (
+              <Link
                 key={product.id}
-                onClick={() => navigate(`/product/${product.id}`)}
-                className="bg-white rounded-2xl p-3 min-w-[70vw] shadow-md relative cursor-pointer hover:shadow-lg transition"
+                to={`/product/${product.id}`}
+                className="min-w-[220px] w-56 flex-shrink-0 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group border border-gray-100 hover:border-green-200"
               >
-                <div className="absolute top-2 left-2 bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold">
-                  Recently Added
+                <div className="relative overflow-hidden">
+                  <span className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium px-3 py-1 rounded-full shadow-lg z-10">
+                    New
+                  </span>
+                  <img
+                    src={product.mainImage || shirtImg}
+                    alt={product.name}
+                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
-                <img
-                  src={product.mainImage }
-                  alt={product.name}
-                  className="w-full h-30 rounded-xl object-contain"
-                />
-                <p className="text-sm font-semibold mt-2">{product.name}</p>
-                <p className="text-xs text-gray-500">
-                  {product.seller || 'Sold by Wholesaler'}
-                </p>
-                <p className="font-bold text-base text-black mt-1">
-                  {product.price || 'N/A'} /- Per Pack
-                </p>
-              </div>
+                
+                <div className="p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm line-clamp-2 group-hover:text-green-600 transition-colors duration-200">
+                    {product.name}
+                  </h3>
+                  <p className="text-gray-500 text-xs mb-3 flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    {product.seller || 'Sold by Manufacturer'}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-bold text-lg text-gray-900">
+                      ₹{product.price || 'N/A'}
+                      <span className="text-xs font-normal text-gray-500 ml-1">per pack</span>
+                    </p>
+                    <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center group-hover:bg-green-100 transition-colors duration-200">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             ))
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

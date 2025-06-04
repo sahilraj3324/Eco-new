@@ -1,196 +1,215 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import productImg from '../../assets/men shirts.png';
-import cartImg from '../../assets/cart.png';
-import logoImg from '../../assets/shop vector icon.png';
-import NewProductsSection from '../Homepage/NewProducts';
-import { BsCartCheck } from 'react-icons/bs';
+import React, { useState } from "react";
+import { Package, Calendar, XCircle, Clock, CheckCircle2, Truck, Filter } from "lucide-react";
+import AllOrders from "./AllOrders";
+import NewProducts from "../Homepage/NewProducts";
 
-const MyOrders = () => {
-  const [activeTab, setActiveTab] = useState('Active');
-  const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+const Orders = () => {
+  const [activeTab, setActiveTab] = useState("All");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const tabs = {
+    "All": <AllOrders />,
+    "Pending": <AllOrders statusFilter="pending" />,
+    "Processing": <AllOrders statusFilter="processing" />,
+    "Shipped": <AllOrders statusFilter="shipped" />,
+    "Delivered": <AllOrders statusFilter="delivered" />,
+    "Cancelled": <AllOrders statusFilter="cancelled" />
+  };
 
-  const tabs = ['Active', 'Past', 'Cancelled'];
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedUserId = localStorage.getItem('Id');
-
-    if (!storedUserId) {
-      setError('Seller ID not found.');
-      setLoading(false);
-      return;
-    }
-
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get(`/api/order/buyer/${storedUserId}`);
-        setOrders(res.data);
-        setFilteredOrders(res.data);
-      } catch (err) {
-        console.error(err.response?.data || err.message || err);
-        setError('Failed to fetch orders.');
-      } finally {
-        setLoading(false);
-      }
+  const getTabIcon = (tab) => {
+    const icons = {
+      "All": Package,
+      "Pending": Clock,
+      "Processing": Filter,
+      "Shipped": Truck,
+      "Delivered": CheckCircle2,
+      "Cancelled": XCircle
     };
+    return icons[tab] || Package;
+  };
 
-    fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    const filtered = orders.filter((order) => {
-      const matchesStatus =
-        activeTab === 'Active'
-          ? order.status === 'active'
-          : activeTab === 'Past'
-          ? order.status === 'completed'
-          : order.status === 'cancelled';
-
-      const matchesSearch = order.productName
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase()) || order.sku?.includes(searchQuery);
-
-      return matchesStatus && matchesSearch;
-    });
-
-    setFilteredOrders(filtered);
-  }, [orders, activeTab, searchQuery]);
-
-  const handleTabClick = (tab) => setActiveTab(tab);
-
-  const handleLogoClick = () => navigate('/');
-  const handleCartClick = () => navigate('/cart');
-  const handleSearch = (e) => setSearchQuery(e.target.value);
-
-  const dummyProducts = Array(4).fill({
-    name: 'Stylish Glamorous Men Shirts',
-    seller: 'Vishwakar',
-    price: '₹949/- Per Pack',
-    tag: 'Recently Added',
-    image: productImg,
-  });
+  const getTabColor = (tab) => {
+    const colors = {
+      "All": "text-blue-600 border-blue-600 bg-blue-50",
+      "Pending": "text-yellow-600 border-yellow-600 bg-yellow-50",
+      "Processing": "text-purple-600 border-purple-600 bg-purple-50",
+      "Shipped": "text-indigo-600 border-indigo-600 bg-indigo-50",
+      "Delivered": "text-green-600 border-green-600 bg-green-50",
+      "Cancelled": "text-red-600 border-red-600 bg-red-50"
+    };
+    return colors[tab] || "text-gray-600 border-gray-600 bg-gray-50";
+  };
 
   return (
-    <div className="font-sans p-3 w-full min-h-screen box-border overflow-x-hidden">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-5 w-full">
-        <img
-          src={logoImg}
-          alt="Logo"
-          className="h-9 cursor-pointer"
-          onClick={handleLogoClick}
-        />
-        <img
-          src={cartImg}
-          alt="Cart"
-          className="h-7 cursor-pointer"
-          onClick={handleCartClick}
-        />
-      </div>
-
-      {/* Title */}
-      <div className="text-center text-xl font-bold text-gray-700 mb-2">My Orders</div>
-      <div className="text-center text-sm text-gray-400 mb-4">
-        Found {filteredOrders.length} Items
-      </div>
-
-      {/* Tabs */}
-      <div className="flex justify-around border-b border-gray-300 mb-3 w-full">
-        {tabs.map((tab) => (
-          <div
-            key={tab}
-            className={`py-3 cursor-pointer font-bold flex-1 text-center ${
-              activeTab === tab
-                ? 'text-sky-500 border-b-2 border-sky-500'
-                : 'text-gray-500'
-            }`}
-            onClick={() => handleTabClick(tab)}
-          >
-            {tab}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8 mb-8">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl">
+                <Package className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+              📦 Order Management
+            </h1>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              Track, manage, and review all your orders in one convenient location
+            </p>
           </div>
-        ))}
-      </div>
-
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search By Product Name / SKU ID"
-        className="block mx-auto mb-4 w-[90%] max-w-[400px] py-3 px-4 rounded-lg border border-gray-200 bg-gray-100 text-sm"
-        onChange={handleSearch}
-        value={searchQuery}
-      />
-
-      {/* Orders Display */}
-      {loading ? (
-        <div className="text-center text-gray-500 py-8">Loading...</div>
-      ) : error ? (
-        <div className="text-center text-red-500 py-8">{error}</div>
-      ) : filteredOrders.length === 0 ? (
-        <div className="text-center text-gray-500 bg-gray-50 py-8 px-5 rounded-xl mb-6 text-sm">
-          No Items Found
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 mb-6">
-          {filteredOrders.map((order, idx) => (
-            <div
-              key={order._id || idx}
-              className="bg-white rounded-xl p-4 shadow text-sm"
+
+        {/* Enhanced Tabs */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 mb-8 overflow-hidden">
+          {/* Desktop Tabs */}
+          <div className="hidden sm:flex border-b border-gray-200">
+            {Object.keys(tabs).map((tab) => {
+              const Icon = getTabIcon(tab);
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  className={`flex-1 py-4 px-6 text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 relative ${
+                    isActive
+                      ? `${getTabColor(tab)} border-b-3`
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{tab}</span>
+                  {isActive && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-t-full"></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile Dropdown */}
+          <div className="sm:hidden border-b border-gray-200">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="w-full py-4 px-6 text-left font-semibold text-gray-700 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
-              <div className="font-semibold text-gray-800 mb-1">
-                {order.productName || 'Unnamed Product'}
+              <div className="flex items-center gap-2">
+                {React.createElement(getTabIcon(activeTab), { className: "h-4 w-4" })}
+                <span>{activeTab}</span>
               </div>
-              <div>Status: <span className="capitalize">{order.status}</span></div>
-              <div>SKU: {order.sku || 'N/A'}</div>
-              <div>Quantity: {order.quantity || 1}</div>
-              <div className="text-xs text-gray-500 mt-1">
-                Ordered on: {new Date(order.createdAt).toLocaleDateString()}
+              <Calendar className={`h-4 w-4 transition-transform ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isMobileMenuOpen && (
+              <div className="border-t border-gray-200 bg-gray-50">
+                {Object.keys(tabs).map((tab) => {
+                  const Icon = getTabIcon(tab);
+                  return (
+                    <button
+                      key={tab}
+                      className={`w-full py-3 px-6 text-left text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                        activeTab === tab
+                          ? `${getTabColor(tab)}`
+                          : "text-gray-600 hover:text-gray-800 hover:bg-white"
+                      }`}
+                      onClick={() => {
+                        setActiveTab(tab);
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{tab}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* New Products */}
-      <NewProductsSection />
-     
-
-      {/* Trending Products */}
-      <div className="text-base font-bold my-5 text-gray-700">Trending Products</div>
-      <div className="grid grid-cols-2 gap-3 w-full mb-8">
-        {dummyProducts.map((product, idx) => (
-          <div
-            key={idx}
-            className="bg-white rounded-xl p-2 shadow-sm text-xs cursor-pointer"
-          >
-            <div className="relative">
-              <img
-                src={product.image}
-                alt="Product"
-                className="w-full h-[120px] rounded-lg mb-1 object-cover"
-              />
-              <div className="bg-yellow-300 text-gray-800 text-[10px] font-bold py-0.5 px-1.5 rounded absolute top-2 left-2">
-                {product.tag}
-              </div>
-            </div>
-            <div><strong>{product.name}</strong></div>
-            <div>Sold by: {product.seller}</div>
-            <div>{product.price}</div>
+            )}
           </div>
-        ))}
-      </div>
 
-      {/* Footer */}
-      <div className="mt-8 text-center text-xs text-gray-400 border-t border-gray-200 pt-3 w-full">
-        © {new Date().getFullYear()} YourCompany. All rights reserved.
+          {/* Tab Content */}
+          <div className="p-6">
+            <div className="mb-4">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                {React.createElement(getTabIcon(activeTab), { className: "h-5 w-5" })}
+                {activeTab} Orders
+              </h2>
+              <p className="text-gray-600 text-sm mt-1">
+                {activeTab === "All" 
+                  ? "View and manage all your orders across all statuses"
+                  : `View and manage your ${activeTab.toLowerCase()} orders`
+                }
+              </p>
+            </div>
+            
+            {/* Orders Content */}
+            <div className="mt-6">
+              {tabs[activeTab]}
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Product Sections */}
+        <div className="space-y-8">
+          {/* New Products Section */}
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">✨ New Products</h3>
+                <p className="text-gray-600 text-sm">Discover the latest additions to our collection</p>
+              </div>
+            </div>
+            <NewProducts />
+          </div>
+
+          {/* Trending Products Section */}
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">🔥 Trending Products</h3>
+                <p className="text-gray-600 text-sm">Popular items other customers are ordering</p>
+              </div>
+            </div>
+            <NewProducts />
+          </div>
+
+          {/* Recommended Section */}
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                <Truck className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">💝 Recommended for You</h3>
+                <p className="text-gray-600 text-sm">Personalized recommendations based on your order history</p>
+              </div>
+            </div>
+            <NewProducts />
+          </div>
+        </div>
+
+        {/* Enhanced Footer */}
+        <div className="mt-12 bg-white/60 backdrop-blur-lg rounded-3xl shadow-lg border border-white/20 p-6 text-center">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Package className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-gray-700 font-medium">Order Management System</span>
+            </div>
+            <div className="text-gray-500 text-sm">
+              © {new Date().getFullYear()} EcoCys. All rights reserved.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default MyOrders;
+export default Orders;

@@ -1,25 +1,45 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, CheckCircle2, MapPin, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2, Package, CreditCard, MapPin, Star, Shield, Truck, Heart } from 'lucide-react';
+
+const getVariantForOrderItem = (item) => {
+  if (!item.product || !item.variantId) return null;
+  return (item.product.variants || []).find(
+    v => (v.id || v.Id) === item.variantId
+  );
+};
 
 const OrderPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Handle both single item and bulk orders
   const item = location.state?.item;
+  const items = location.state?.items;
+  const isBulkOrder = location.state?.isBulkOrder;
+  const allSellers = location.state?.allSellers;
 
-  // If no item is passed via navigation
-  if (!item) {
+  // Determine what we're working with
+  const orderItems = isBulkOrder ? items : (item ? [item] : []);
+
+  // If no item(s) are passed via navigation
+  if (!orderItems || orderItems.length === 0) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-pink-50">
-        <div className="bg-white p-8 rounded-3xl shadow-lg max-w-md w-full text-center">
-          <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Your Cart is Empty</h2>
-          <p className="text-gray-600 mb-8">Please add items to proceed with your order</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-6">
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-12 text-center max-w-md">
+          <div className="w-20 h-20 bg-gradient-to-r from-red-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Package className="h-10 w-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+            No Order Details Found
+          </h2>
+          <p className="text-gray-600 mb-8">Looks like something went wrong. Let's get you back to your cart.</p>
           <button
             onClick={() => navigate('/cart')}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all"
+            className="group bg-gradient-to-r from-blue-600 via-purple-600 to-blue-700 hover:from-blue-700 hover:via-purple-700 hover:to-blue-800 text-white py-3 px-8 rounded-2xl font-semibold transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center gap-3"
           >
-            <ArrowLeft className="w-5 h-5" /> Back to Cart
+            <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
+            Back to Cart
           </button>
         </div>
       </div>
@@ -27,187 +47,521 @@ const OrderPage = () => {
   }
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState(null);
-  const address = localStorage.getItem('address') || '123 Main St, Anytown, USA';
+  const address = localStorage.getItem('address') || 'dummy-user-123';
 
-  const createOrder = async (orderData) => {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-    
-    try {
-      const response = await fetch(`${API_BASE}/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Order failed with status ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
+  // Calculate totals for all items
+  const calculateTotals = () => {
+    return orderItems.reduce((acc, currentItem) => {
+      const variant = getVariantForOrderItem(currentItem);
+      const price = (variant?.price || variant?.Price || currentItem.product?.price || 0);
+      const itemTotal = price * currentItem.quantity;
+      
+      acc.totalAmount += itemTotal;
+      acc.totalQuantity += currentItem.quantity;
+      return acc;
+    }, { totalAmount: 0, totalQuantity: 0 });
   };
+
+  const { totalAmount, totalQuantity } = calculateTotals();
+
+  // Group items by seller for display
+  const groupedBySeller = orderItems.reduce((acc, currentItem) => {
+    const sellerId = currentItem.product?.sellerId || currentItem.product?.userId || 'unknown-seller';
+    const sellerName = currentItem.product?.sellerName || currentItem.product?.seller?.name || 'Unknown Seller';
+    
+    if (!acc[sellerId]) {
+      acc[sellerId] = {
+        sellerId,
+        sellerName,
+        items: [],
+        sellerTotal: 0
+      };
+    }
+    
+    const variant = getVariantForOrderItem(currentItem);
+    const price = (variant?.price || variant?.Price || currentItem.product?.price || 0);
+    const itemTotal = price * currentItem.quantity;
+    
+    acc[sellerId].items.push(currentItem);
+    acc[sellerId].sellerTotal += itemTotal;
+    
+    return acc;
+  }, {});
+
+  const sellers = Object.values(groupedBySeller);
 
   const handlePlaceOrder = async () => {
     if (!address) {
-      setError('Please provide a shipping address!');
+      alert('Please provide a shipping address!');
       return;
     }
-  
-    setIsProcessing(true);
-    setError(null);
-    
-    const order = {
-      buyerId: localStorage.getItem('userId') || 'demo-user-123',
-      productId: item.product.id,
-      product: {
-        id: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        image: item.product.mainImage || item.product.imageUrls?.[0]
-      },
-      quantity: item.quantity,
-      totalPrice: (item.product.price * item.quantity),
-      shippingAddress: address,
-      paymentMethod: 'COD',
-    };
-  
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const createdOrder = {
-        ...order,
-        id: `order-${Date.now()}`,
-        status: 'Confirmed',
-        orderDate: new Date().toISOString()
-      };
 
+    setIsProcessing(true);
+    
+    try {
+      const orderPromises = orderItems.map(async (currentItem) => {
+        const variant = getVariantForOrderItem(currentItem);
+        const price = (variant?.price || variant?.Price || currentItem.product?.price || 0);
+        
+        const order = {
+          buyerId: localStorage.getItem('Id') || 'dummy-user-123',
+          productId: currentItem.product.id,
+          product: currentItem.product,
+          variantId: currentItem.variantId,
+          variant: variant,
+          quantity: currentItem.quantity,
+          unitPrice: price,
+          sellerId: currentItem.product.sellerId || currentItem.product.userId,
+          status: 'Pending',
+          orderDate: new Date().toISOString(),
+          processedAt: null,
+          shippingAddress: address,
+          isBulkOrder: isBulkOrder,
+          orderType: isBulkOrder ? (allSellers ? 'multi-seller' : 'single-seller') : 'single-item'
+        };
+
+        try {
+          const response = await fetch('/api/order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(order),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to place order for ${currentItem.product.name}`);
+          }
+
+          return await response.json();
+        } catch (apiError) {
+          console.warn('API failed, using fallback:', apiError);
+          // Fallback to localStorage for development
+          const orderId = `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const fallbackOrder = {
+            ...order,
+            id: orderId
+          };
+          
+          // Store in localStorage
+          const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+          existingOrders.push(fallbackOrder);
+          localStorage.setItem('orders', JSON.stringify(existingOrders));
+          
+          return fallbackOrder;
+        }
+      });
+
+      const orderResults = await Promise.all(orderPromises);
+
+      // Prepare order items for stock deduction
+      const orderItemsForStock = orderItems.map(currentItem => {
+        const variant = getVariantForOrderItem(currentItem);
+        return {
+          productId: currentItem.product.id,
+          variantId: currentItem.variantId,
+          quantity: currentItem.quantity,
+          productName: currentItem.product.name,
+          variantColor: variant?.color || variant?.Color,
+          variantSize: variant?.size || variant?.Size
+        };
+      });
+
+      // Navigate to success page with bulk order info
       navigate('/ordersuccess', { 
         state: { 
-          orderId: createdOrder.id,
-          orderDetails: createdOrder,
-          product: createdOrder.product
+          orderIds: orderResults.map(r => r.id),
+          isBulkOrder: isBulkOrder,
+          totalItems: orderItems.length,
+          totalAmount: totalAmount,
+          sellers: sellers.length,
+          orderItemsForStock: orderItemsForStock,
+          cartItemIds: orderItems.map(item => item.id),
+          isFullCartCheckout: allSellers
         } 
       });
+
     } catch (error) {
-      setError(error.message || 'Failed to place order. Please try again.');
-      console.error('Order Error:', error);
+      console.error('Error placing order:', error);
+      alert(`Failed to place order. Please try again! Error: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const total = (item.product?.price || 0) * item.quantity;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-pink-50 pb-10">
-      {/* Mobile Header */}
-      <div className="bg-white p-4 shadow-sm sticky top-0 z-10">
-        <button 
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-blue-600 font-medium"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Back</span>
-        </button>
-        <h1 className="text-xl font-bold mt-2 text-gray-800">Complete Your Order</h1>
-      </div>
-
-      {/* Mobile Content */}
-      <div className="p-4">
-        {/* Product Card */}
-        <div className="bg-white rounded-2xl shadow-md p-5 mb-6">
-          <div className="flex gap-4 items-start">
-            <div className="w-28 h-28 bg-gradient-to-br from-blue-100 to-pink-100 rounded-xl overflow-hidden flex items-center justify-center">
-              <img 
-                src={item.product?.mainImage || item.product?.imageUrls?.[0] || '/fallback.png'} 
-                alt={item.product?.name}
-                className="w-full h-full object-contain"
-              />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 mb-8">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl">
+                  {isBulkOrder ? <Package className="h-10 w-10 text-white" /> : <CreditCard className="h-10 w-10 text-white" />}
+                </div>
+                <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                  {orderItems.length}
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold text-gray-800">{item.product?.name}</h2>
-              <div className="mt-2 flex items-center gap-4">
-                <span className="text-blue-600 font-bold">₹{item.product?.price}</span>
-                <span className="text-gray-500">× {item.quantity}</span>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+              {isBulkOrder ? '🛍️ Bulk Order Checkout' : '🛒 Order Checkout'}
+            </h1>
+            <p className="text-gray-600 text-lg">
+              {isBulkOrder 
+                ? `${orderItems.length} amazing items from ${sellers.length} trusted seller${sellers.length > 1 ? 's' : ''}`
+                : 'Review your order details and complete your purchase'
+              }
+            </p>
+            
+            {/* Progress Indicator */}
+            <div className="flex items-center justify-center mt-6 space-x-4">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">✓</div>
+                <span className="ml-2 text-sm font-medium text-gray-700">Cart</span>
+              </div>
+              <div className="h-1 w-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-sm">2</div>
+                <span className="ml-2 text-sm font-medium text-purple-600">Checkout</span>
+              </div>
+              <div className="h-1 w-12 bg-gray-200 rounded-full"></div>
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 font-bold text-sm">3</div>
+                <span className="ml-2 text-sm font-medium text-gray-400">Success</span>
               </div>
             </div>
           </div>
-          
-          <button
-            onClick={() => navigate('/cart')}
-            className="mt-4 w-full text-blue-600 hover:text-blue-800 font-medium py-2 rounded-lg flex items-center justify-center gap-2 border border-blue-200"
-          >
-            <ArrowLeft className="h-5 w-5" /> Modify Order
-          </button>
         </div>
 
-        {/* Shipping Details */}
-        <div className="bg-white rounded-2xl shadow-md p-5 mb-6">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-3">
-            <MapPin className="w-5 h-5 text-blue-500" />
-            Shipping Details
-          </h3>
-          <div className="bg-gray-50 p-4 rounded-xl">
-            <p className="font-medium text-gray-800 mb-1">Delivery Address</p>
-            <p className="text-gray-600 whitespace-pre-line">{address}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Products Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {isBulkOrder ? (
+              // Bulk Order Display
+              <div className="space-y-6">
+                <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-6">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+                    <Package className="h-6 w-6 text-purple-600" />
+                    Order Items ({orderItems.length})
+                  </h2>
+                  
+                  {sellers.map((seller, sellerIndex) => (
+                    <div key={seller.sellerId} className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6 last:mb-0">
+                      {/* Seller Header */}
+                      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-4 mb-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="relative">
+                              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">{seller.sellerName.charAt(0).toUpperCase()}</span>
+                              </div>
+                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                                <CheckCircle2 className="h-3 w-3 text-white" />
+                              </div>
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-bold text-white">{seller.sellerName}</h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                                <span className="text-white/90 text-sm">4.8 rating</span>
+                                <span className="text-white/70">•</span>
+                                <span className="text-white/90 text-sm">{seller.items.length} item{seller.items.length > 1 ? 's' : ''}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-white/80 text-sm">Seller Total</p>
+                            <p className="text-2xl font-bold text-white">₹{seller.sellerTotal}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Seller Items */}
+                      <div className="space-y-4">
+                        {seller.items.map((currentItem, index) => {
+                          const variant = getVariantForOrderItem(currentItem);
+                          const price = (variant?.price || variant?.Price || currentItem.product?.price || 0);
+                          return (
+                            <div key={index} className="group bg-white rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-purple-200">
+                              <div className="flex items-center gap-4">
+                                <div className="relative">
+                                  <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg">
+                                    <img 
+                                      src={currentItem.product?.mainImage || currentItem.product?.imageUrls?.[0] || '/fallback.png'} 
+                                      alt={currentItem.product?.name} 
+                                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                    />
+                                  </div>
+                                  <div className="absolute -top-2 -left-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                                    ✨ Premium
+                                  </div>
+                                  <button className="absolute -top-2 -right-2 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-red-50 transition-colors">
+                                    <Heart className="h-3 w-3 text-gray-400 hover:text-red-500 transition-colors" />
+                                  </button>
+                                </div>
+                                
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-purple-700 transition-colors">
+                                    {currentItem.product?.name}
+                                  </h4>
+                                  {variant && (
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div 
+                                          className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+                                          style={{ backgroundColor: variant.color === 'Black' ? '#000' : variant.color === 'White' ? '#fff' : '#6B7280' }}
+                                        ></div>
+                                        <span className="text-sm font-medium text-gray-700">{variant.color || variant.Color}</span>
+                                      </div>
+                                      {(variant.size || variant.Size) && (
+                                        <div className="bg-gradient-to-r from-blue-100 to-purple-100 px-2 py-1 rounded-full">
+                                          <span className="text-xs font-medium text-gray-700">Size: {variant.size || variant.Size}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">₹{price}</span>
+                                      <span className="text-sm text-gray-500">× {currentItem.quantity}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm text-gray-500">Subtotal</p>
+                                      <p className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                                        ₹{price * currentItem.quantity}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // Single Item Display
+              <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 p-6">
+                  <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+                    <CreditCard className="h-6 w-6" />
+                    Your Selected Item
+                  </h2>
+                  <p className="text-white/90">Ready for checkout</p>
+                </div>
+                
+                <div className="p-8">
+                  <div className="flex flex-col lg:flex-row items-center gap-8">
+                    <div className="relative">
+                      <div className="w-48 h-48 rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-gray-100 to-gray-200">
+                        <img 
+                          src={orderItems[0].product?.mainImage || orderItems[0].product?.imageUrls?.[0] || '/fallback.png'} 
+                          alt={orderItems[0].product?.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute -top-3 -left-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-sm font-bold px-3 py-2 rounded-2xl shadow-xl">
+                        🏆 Bestseller
+                      </div>
+                      <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold px-3 py-2 rounded-2xl shadow-xl">
+                        ✨ Premium
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 text-center lg:text-left">
+                      <h3 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+                        {orderItems[0].product?.name}
+                      </h3>
+                      {(() => {
+                        const variant = getVariantForOrderItem(orderItems[0]);
+                        return variant && (
+                          <div className="flex items-center justify-center lg:justify-start gap-4 mb-4">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-6 h-6 rounded-full border-2 border-white shadow-lg"
+                                style={{ backgroundColor: variant.color === 'Black' ? '#000' : variant.color === 'White' ? '#fff' : '#6B7280' }}
+                              ></div>
+                              <span className="font-semibold text-gray-700">{variant.color || variant.Color}</span>
+                            </div>
+                            {(variant.size || variant.Size) && (
+                              <div className="bg-gradient-to-r from-blue-100 to-purple-100 px-4 py-2 rounded-full">
+                                <span className="font-semibold text-gray-700">Size: {variant.size || variant.Size}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div className="space-y-2 mb-6">
+                        <div className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                          ₹{(() => {
+                            const variant = getVariantForOrderItem(orderItems[0]);
+                            return (variant?.price || variant?.Price || orderItems[0].product?.price || 0);
+                          })()}
+                        </div>
+                        <div className="bg-gradient-to-r from-gray-100 to-white px-4 py-2 rounded-2xl inline-block">
+                          <span className="text-gray-600 font-medium">Quantity: </span>
+                          <span className="text-xl font-bold text-purple-600">{orderItems[0].quantity}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Product Features */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-xl border border-green-100">
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-semibold text-green-700">Quality Assured</span>
+                          </div>
+                        </div>
+                        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-xl border border-blue-100">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm font-semibold text-blue-700">Free Shipping</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Back to Cart Button */}
+            <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-6">
+              <button
+                onClick={() => navigate('/cart')}
+                className="group flex items-center gap-3 text-purple-600 hover:text-purple-800 font-semibold transition-all duration-200 text-lg"
+              >
+                <ArrowLeft className="h-6 w-6 transition-transform group-hover:-translate-x-1" />
+                Back to Cart
+              </button>
+            </div>
+          </div>
+
+          {/* Order Summary & Address Section */}
+          <div className="space-y-6">
+            {/* Order Summary */}
+            <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 sticky top-6">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                  <CheckCircle2 className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+                  Order Summary
+                </h3>
+                <p className="text-gray-600">Review your purchase details</p>
+              </div>
+              
+              {isBulkOrder && (
+                <div className="mb-6 space-y-3">
+                  <h4 className="font-bold text-gray-700 text-sm uppercase tracking-wider flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    By Seller
+                  </h4>
+                  {sellers.map((seller, index) => (
+                    <div key={seller.sellerId} className="bg-gradient-to-r from-gray-50 to-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                            <span className="text-white font-bold text-xs">{seller.sellerName.charAt(0)}</span>
+                          </div>
+                          <span className="font-semibold text-gray-900 text-sm">{seller.sellerName}</span>
+                        </div>
+                        <span className="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                          ₹{seller.sellerTotal}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="border-t border-gray-200 my-4"></div>
+                </div>
+              )}
+              
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Items ({totalQuantity})
+                  </span>
+                  <span className="font-semibold text-lg">₹{totalAmount}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    Shipping
+                  </span>
+                  <span className="font-semibold text-green-600">FREE</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Tax (GST)</span>
+                  <span className="font-semibold">₹0</span>
+                </div>
+                
+                <div className="border-t border-gray-200 my-4"></div>
+                <div className="flex justify-between text-xl font-bold bg-gradient-to-r from-gray-50 to-white rounded-2xl p-4 shadow-inner">
+                  <span>Total</span>
+                  <span className="text-2xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                    ₹{totalAmount}
+                  </span>
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              <div className="mb-8">
+                <h4 className="font-bold text-gray-700 text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Shipping Address
+                </h4>
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-blue-600 mt-1" />
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap flex-1">{address}</pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* Place Order Button */}
+              <button
+                onClick={handlePlaceOrder}
+                className="group relative w-full bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 hover:from-green-700 hover:via-emerald-700 hover:to-green-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 text-lg"
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-6 w-6 transition-transform group-hover:scale-110" />
+                    <span>{isBulkOrder ? `Place ${orderItems.length} Orders` : 'Place Order'}</span>
+                  </>
+                )}
+                <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
+              
+              {/* Trust Badges */}
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-green-600" />
+                    <span className="text-xs font-semibold text-green-700">Secure Payment</span>
+                  </div>
+                </div>
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-100">
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-700">Fast Delivery</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Order Summary */}
-        <div className="bg-white rounded-2xl shadow-md p-5 mb-6">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
-            Order Summary
-          </h3>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium">₹{total}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Shipping</span>
-              <span className="text-green-600 font-medium">FREE</span>
-            </div>
-            <div className="border-t border-gray-200 my-3"></div>
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total Amount</span>
-              <span className="text-blue-600">₹{total}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100">
-            {error}
-          </div>
-        )}
-
-        {/* Place Order Button - Now in main content area */}
-        <button
-          onClick={handlePlaceOrder}
-          disabled={isProcessing}
-          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-70"
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" /> Processing...
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="h-5 w-5" /> Place Order (₹{total})
-            </>
-          )}
-        </button>
       </div>
     </div>
   );

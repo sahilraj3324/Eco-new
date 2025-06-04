@@ -8,7 +8,7 @@ import BottomNavBar from './components/BottomNavBar';
 import MyOrders from './Pages/Orders/Orders';
 import OrderPage from './Pages/Orders/OrderPage';
 import OrderSuccess from './Pages/Orders/OrderSuccess';
-
+import SearchResults from './Pages/SearchResults/SearchResults';
 
 import Settings from './Pages/Settings';
 import RetailerLogin from './Pages/Auth/Login/RetailerLogin';
@@ -32,6 +32,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/search" element={<SearchResults />} />
             <Route path="/orders" element={<MyOrders />} />
             <Route path="/order" element={<OrderPage />} />
             <Route path="/allorders" element={<AllOrders />} />
@@ -41,9 +42,8 @@ function App() {
             <Route path="/login" element={<RetailerLogin />} />
             <Route path="/signup" element={<RetailerSignup />} />
             <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="*" element={<h2>404 Not Found</h2>} />
             <Route path="/cart" element={<Cart />} />
-
+            <Route path="*" element={<h2>404 Not Found</h2>} />
           </Routes>
         </div>
         <BottomNavBar />
