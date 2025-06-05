@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { storage } from '../../../Firebase/firebase'
+import { storage } from '../../../../../Firebase/firebase'
 import { v4 as uuidv4 } from 'uuid'
 
 export default function EditProduct() {

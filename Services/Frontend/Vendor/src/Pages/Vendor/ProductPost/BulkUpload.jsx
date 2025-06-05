@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import { v4 as uuidv4 } from "uuid";
 import { CloudUpload, FileText, Upload, Image, CheckCircle, AlertCircle, Loader2, Download } from "lucide-react";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../../../Firebase/firebase";
+import { storage } from "../../../../../Firebase/firebase";
 
 const BulkUpload = () => {
   const [csvFile, setCsvFile] = useState(null);
