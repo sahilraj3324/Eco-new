@@ -23,7 +23,6 @@ export default function Retailers() {
           ? retailersData 
           : (retailersData?.value || [])
         
-        console.log('Retailers fetched:', retailersArray)
         setRetailers(retailersArray)
         
         // Fetch order counts for each retailer
@@ -39,7 +38,6 @@ export default function Retailers() {
               
               orderCountsObj[retailer.id] = orders.length
             } catch (err) {
-              console.error(`Error fetching orders for buyer ${retailer.id}:`, err)
               orderCountsObj[retailer.id] = 0
             }
           })
@@ -47,7 +45,6 @@ export default function Retailers() {
         
         setOrderCounts(orderCountsObj)
       } catch (err) {
-        console.error('Error fetching retailers:', err)
         setError(err.message || 'Failed to fetch retailers')
         setRetailers([])
       } finally {
@@ -75,7 +72,6 @@ export default function Retailers() {
         return retailer
       }))
     } catch (err) {
-      console.error('Error updating retailer status:', err)
       alert(`Failed to ${newStatus === 'Active' ? 'activate' : 'block'} retailer: ${err.message}`)
     }
   }

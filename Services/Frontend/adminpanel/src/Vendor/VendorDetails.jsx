@@ -26,7 +26,6 @@ export default function VendorDetails() {
       setError(null)
     } catch (err) {
       setError('Failed to fetch vendor details. Please try again later.')
-      console.error('Error fetching vendor details:', err)
     } finally {
       setLoading(false)
     }
@@ -39,7 +38,6 @@ export default function VendorDetails() {
       setProducts(Array.isArray(data) ? data : [])
       setProductsError(null)
     } catch (err) {
-      console.error(`Error fetching products for vendor ${id}:`, err)
       setProductsError('Failed to load vendor products. Please try again later.')
       setProducts([])
     } finally {
@@ -56,7 +54,6 @@ export default function VendorDetails() {
       setError(null)
     } catch (err) {
       setError('Failed to update vendor status. Please try again later.')
-      console.error('Error updating vendor status:', err)
     } finally {
       setUpdatingStatus(false)
     }

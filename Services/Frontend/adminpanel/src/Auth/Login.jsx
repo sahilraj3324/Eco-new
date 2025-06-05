@@ -43,12 +43,12 @@ export default function Login() {
         userData = {
           ...response.admin,
           userType: 'admin',
-          role: 'admin' // Admin has full access
+          role: 'admin', // Admin has full access
+          accessibleTabs: ['all'], // Admin has access to all tabs
+          roles: ['admin']
         };
         loginSuccessful = true;
       } catch (adminError) {
-        console.log('Admin login failed, trying subadmin...', adminError.response?.status);
-        
         // If admin login fails, try subadmin login
         try {
           response = await subAdminApi.login({
@@ -65,22 +65,20 @@ export default function Login() {
           };
           loginSuccessful = true;
         } catch (subAdminError) {
-          console.log('SubAdmin login also failed', subAdminError.response?.status);
           // Both logins failed
           throw new Error('Invalid credentials');
         }
       }
 
       if (loginSuccessful) {
-        // Login user with token and user data
-        login(response.token, userData);
+        // Login user without token (cookies handle authentication)
+        login(null, userData); // Pass null for token since it's in cookies
 
         // Navigate to dashboard
         navigate('/dashboard');
       }
       
     } catch (err) {
-      console.error('Login error:', err);
       setError(
         err.response?.data?.message || 
         err.message ||

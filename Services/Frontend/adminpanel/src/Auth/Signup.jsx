@@ -74,30 +74,21 @@ export default function Signup() {
       let userData;
 
       // Only admin signup is allowed
-      response = await adminApi.create(requestData);
+      response = await adminApi.signup(requestData); // Changed from create to signup
       userData = {
-        ...response,
+        ...response.admin, // Response structure changed
         userType: 'admin',
-        role: 'admin' // Admin has full access
+        role: 'admin', // Admin has full access
+        accessibleTabs: ['all'], // Admin has access to all tabs
+        roles: ['admin']
       };
 
-      // For signup, we might not get a token immediately (depends on your backend)
-      // If you do get a token, login the user, otherwise redirect to login
-      if (response.token) {
-        login(response.token, userData);
-        navigate('/dashboard');
-      } else {
-        // Registration successful, redirect to login
-        navigate('/login', { 
-          state: { 
-            message: 'Registration successful! Please log in.',
-            email: formData.email 
-          } 
-        });
-      }
+      // For signup with cookies, user is automatically logged in
+      // No need to check for token since it's stored in cookies
+      login(null, userData); // Pass null for token since it's in cookies
+      navigate('/dashboard');
       
     } catch (err) {
-      console.error('Signup error:', err);
       setError(
         err.response?.data?.message || 
         'Registration failed. Please try again.'

@@ -22,12 +22,16 @@ namespace Backend.Models
         public string Phone { get; set; }
 
         [Required]
-        public string Password { get; set; }
+        public string PasswordHash { get; set; }
+
+        public string UserType { get; set; } = "SubAdmin";
 
         // Map to the actual database column name "Role" (singular) - now stores Role IDs
         [Required]
         [Column("Role")]
         public string Roles { get; set; } = "";
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Helper property to work with List<string> in API for Role IDs
         [NotMapped]

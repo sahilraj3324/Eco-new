@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../../../../../Firebase/firebase";
+import { storage } from "../../../firebase";
 import { v4 as uuidv4 } from "uuid";
 import { 
   Plus, Minus, Upload, Image, X, Check, AlertCircle, Loader2, 

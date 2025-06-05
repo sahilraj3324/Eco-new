@@ -21,43 +21,45 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { currentUser, logout } = useAuth()
   
   // Filter navigation items based on user role(s)
   const getFilteredNavItems = () => {
-    if (!user) return []
-    
-    // Admin has access to all items
-    if (user.userType === 'admin') {
+    if (currentUser?.userType === 'admin') {
+      // Admin has access to all navigation items
       return allNavItems
     }
-    
+
     // SubAdmin has access based on their accessible tabs from assigned roles
     // Check multiple possible property names for roles and tabs
-    const userRoles = user.roles || user.Roles || user.role || []
-    const userTabs = user.accessibleTabs || user.AccessibleTabs || []
+    const userRoles = currentUser?.roles || currentUser?.Roles || currentUser?.role || []
+    const userTabs = currentUser?.accessibleTabs || currentUser?.AccessibleTabs || []
     const rolesArray = Array.isArray(userRoles) ? userRoles : [userRoles]
     const tabsArray = Array.isArray(userTabs) ? userTabs : [userTabs]
     
-    console.log('🔍 SubAdmin Navigation Debug:')
-    console.log('  - User object:', user)
-    console.log('  - User roles:', rolesArray)
-    console.log('  - User accessible tabs:', tabsArray)
-    console.log('  - Available nav items:', allNavItems)
+    // Check if user has admin role in their roles array (for SubAdmins with admin permissions)
+    const hasAdminRole = rolesArray.includes('admin') || tabsArray.includes('admin') || tabsArray.includes('all')
     
     // Filter based on accessible tabs
     const filteredItems = allNavItems.filter(item => {
+      // If user has admin role or all access, give them full access
+      if (hasAdminRole) {
+        return true
+      }
+      
       // Check if user has access to any of the required roles/tabs
       const hasAccess = item.roles.some(role => {
-        if (role === 'admin') return false // SubAdmins can't access admin-only items unless they have specific permission
-        return tabsArray.includes(role) || rolesArray.includes(role)
+        // Skip 'admin' role check for SubAdmins without admin access
+        if (role === 'admin') {
+          return false
+        }
+        const hasRole = tabsArray.includes(role) || rolesArray.includes(role)
+        return hasRole
       })
       
-      console.log(`  - ${item.name} (${item.path}): ${hasAccess ? '✅' : '❌'} - Required: [${item.roles.join(', ')}]`)
       return hasAccess
     })
     
-    console.log('  - Final filtered items:', filteredItems)
     return filteredItems
   }
 
@@ -65,8 +67,8 @@ export default function Layout() {
   
   // Redirect SubAdmin to their first available tab if they're on dashboard and don't have dashboard access
   useEffect(() => {
-    if (user?.userType !== 'admin' && location.pathname === '/dashboard') {
-      const userTabs = user.accessibleTabs || user.AccessibleTabs || []
+    if (currentUser?.userType !== 'admin' && location.pathname === '/dashboard') {
+      const userTabs = currentUser?.accessibleTabs || currentUser?.AccessibleTabs || []
       const tabsArray = Array.isArray(userTabs) ? userTabs : [userTabs]
       
       // If user doesn't have dashboard access, redirect to first available tab
@@ -74,7 +76,7 @@ export default function Layout() {
         navigate(navItems[0].path)
       }
     }
-  }, [user, location.pathname, navItems, navigate])
+  }, [currentUser, location.pathname, navItems, navigate])
   
   // Close sidebar when route changes (mobile navigation)
   useEffect(() => {
@@ -119,12 +121,12 @@ export default function Layout() {
         {/* User info */}
         <div className="px-6 py-4 border-b border-cyan-500">
           <div className="text-white">
-            <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
+            <p className="text-sm font-medium">{currentUser?.name || 'Admin User'}</p>
             <p className="text-xs text-cyan-200 capitalize">
-              {user?.userType === 'admin' ? 'Administrator' : 
+              {currentUser?.userType === 'admin' ? 'Administrator' : 
                 (() => {
-                  const userRoles = user?.roles || user?.Roles || user?.role || []
-                  const userTabs = user?.accessibleTabs || user?.AccessibleTabs || []
+                  const userRoles = currentUser?.roles || currentUser?.Roles || currentUser?.role || []
+                  const userTabs = currentUser?.accessibleTabs || currentUser?.AccessibleTabs || []
                   const rolesArray = Array.isArray(userRoles) ? userRoles : [userRoles]
                   const tabsArray = Array.isArray(userTabs) ? userTabs : [userTabs]
                   
@@ -154,7 +156,7 @@ export default function Layout() {
                 {item.name}
               </NavLink>
             ))
-          ) : user?.userType !== 'admin' ? (
+          ) : currentUser?.userType !== 'admin' ? (
             <div className="px-4 py-3 text-sm text-cyan-200">
               <p className="font-medium">No access permissions</p>
               <p className="text-xs">Contact your administrator to assign roles.</p>
@@ -163,7 +165,7 @@ export default function Layout() {
         </nav>
 
         {/* Logout button */}
-        <div className="absolute bottom-0 left-0 right-0 p-3">
+        <div className="relative bottom-0 left-0 right-0 p-3">
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center rounded-md px-4 py-3 text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
@@ -206,9 +208,9 @@ export default function Layout() {
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-700">
-                <span className="font-medium">{user?.name || 'Admin User'}</span>
+                <span className="font-medium">{currentUser?.name || 'Admin User'}</span>
                 <span className="text-gray-500 ml-1">
-                  ({user?.userType === 'admin' ? 'Admin' : 'SubAdmin'})
+                  ({currentUser?.userType === 'admin' ? 'Admin' : 'SubAdmin'})
                 </span>
               </div>
               <button

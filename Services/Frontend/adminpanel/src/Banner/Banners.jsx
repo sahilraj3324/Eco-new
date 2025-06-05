@@ -23,7 +23,6 @@ const Banners = () => {
       setBanners(response.data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching banners:', err);
       setError('Failed to load banners. Please try again later.');
     } finally {
       setLoading(false);
@@ -103,7 +102,6 @@ const Banners = () => {
       
       alert('Banners uploaded successfully!');
     } catch (err) {
-      console.error('Error uploading banners:', err);
       alert('Failed to upload banners. Please try again.');
     } finally {
       setUploading(false);
@@ -122,7 +120,6 @@ const Banners = () => {
       setBanners(banners.filter(banner => banner.id !== id));
       alert('Banner deleted successfully!');
     } catch (err) {
-      console.error('Error deleting banner:', err);
       alert('Failed to delete banner. Please try again.');
     }
   };

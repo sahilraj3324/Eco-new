@@ -38,32 +38,25 @@ export default function Role() {
     setLoading(true);
     setError(null);
     try {
-      console.log('Fetching roles and available tabs...');
-      
       // Fetch roles
       const rolesData = await api.role.getAll();
-      console.log('Roles fetched:', rolesData);
       setRoles(rolesData);
       
       // Fetch available tabs with fallback
       setTabsLoading(true);
       try {
         const tabsData = await api.role.getAvailableTabs();
-        console.log('Available tabs fetched:', tabsData);
         if (tabsData && Array.isArray(tabsData) && tabsData.length > 0) {
           setAvailableTabs(tabsData);
         } else {
-          console.warn('No tabs data received, using fallback');
           setAvailableTabs(FALLBACK_TABS);
         }
       } catch (tabsError) {
-        console.error('Error fetching available tabs, using fallback:', tabsError);
         setAvailableTabs(FALLBACK_TABS);
       }
       setTabsLoading(false);
       
     } catch (err) {
-      console.error('Error fetching data:', err);
       setError('Failed to load data. Please try again later.');
       // Set fallback tabs even on error
       setAvailableTabs(FALLBACK_TABS);
@@ -118,7 +111,6 @@ export default function Role() {
       resetRoleForm();
       setShowRoleForm(false);
     } catch (err) {
-      console.error('Error saving role:', err);
       alert('Failed to save role. Please try again.');
     }
   };
@@ -139,7 +131,6 @@ export default function Role() {
       await api.role.delete(id);
       fetchData();
     } catch (err) {
-      console.error('Error deleting role:', err);
       alert('Failed to delete role. Please try again.');
     }
   };
@@ -156,7 +147,6 @@ export default function Role() {
       await api.role.updateTabs(roleId, updatedTabs);
       fetchData();
     } catch (err) {
-      console.error('Error updating role tabs:', err);
       alert('Failed to update role tabs. Please try again.');
     }
   };

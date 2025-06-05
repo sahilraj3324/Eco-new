@@ -5,7 +5,7 @@ import {
   Building, Hash, CreditCard, Shield
 } from 'lucide-react';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../../../../../Firebase/firebase";
+import { storage } from "../../../firebase";
 import axios from 'axios';
 
 const Profile = () => {

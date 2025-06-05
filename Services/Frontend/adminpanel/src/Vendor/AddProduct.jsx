@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../../Vendor/src/Firebase/firebase';
+import { storage } from '../utils/firebase';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
 import { CloudUpload } from 'lucide-react';
@@ -74,17 +74,13 @@ const AddProduct = () => {
 
   useEffect(() => {
     if (vendorId) {
-      console.log('Using vendorId from URL parameters:', vendorId);
       setSellerId(vendorId);
     } else {
-      console.log('No vendorId found in URL parameters');
       // Fall back to localStorage
       const storedId = localStorage.getItem('Id');
       if (storedId) {
-        console.log('Using Id from localStorage:', storedId);
         setSellerId(storedId);
       } else {
-        console.log('No sellerId found in localStorage either');
       }
     }
   }, [vendorId]);
@@ -97,7 +93,6 @@ const AddProduct = () => {
         const data = await api.category.getAll();
         setCategories(data);
       } catch (err) {
-        console.error('Error fetching categories:', err);
         setMessage('Failed to load categories');
       } finally {
         setLoadingCategories(false);
@@ -120,7 +115,6 @@ const AddProduct = () => {
         const data = await api.subCategory.getByCategoryId(information.category);
         setSubcategories(data);
       } catch (err) {
-        console.error('Error fetching subcategories:', err);
         setSubcategories([]);
       } finally {
         setLoadingSubcategories(false);
@@ -341,7 +335,6 @@ const AddProduct = () => {
       setUploadedImages([]);
       setMainImageFile(null);
     } catch (err) {
-      console.error('❌ Upload failed:', err);
       setMessage(`❌ Upload failed: ${err.response?.data?.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
@@ -463,7 +456,6 @@ const AddProduct = () => {
       setCsvFile(null);
       setProducts([]);
     } catch (error) {
-      console.error('Backend error:', error.response?.data || error.message);
       setMessage('❌ Failed to upload products. See console for details.');
     } finally {
       setUploading(false);

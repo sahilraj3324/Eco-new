@@ -90,12 +90,9 @@ export default function ViewProduct() {
       try {
         setLoading(true);
         setError(null);
-        console.log('Fetching product details for ID:', id);
         const data = await api.product.getById(id); // Assuming an API method like getById
-        console.log('Product data received:', data);
         setProduct(data);
       } catch (err) {
-        console.error('Error fetching product details:', err);
         setError(err.message || 'Failed to fetch product details');
         setProduct(null);
       } finally {
@@ -166,7 +163,6 @@ export default function ViewProduct() {
           urls = parsed;
         }
       } catch (e) {
-        console.warn('Failed to parse imageUrlsJson:', e);
       }
     }
     

@@ -1,6 +1,27 @@
 // Authentication and role management utilities
+// NOTE: For cookie-based authentication, we should use React Context instead of localStorage
+// This file provides utility functions that can be used in non-React contexts
+
+// For React components, prefer using useAuth() hook from AuthContext
+// These functions are fallbacks for non-React contexts or legacy code
+
+let currentUser = null;
+
+// Function to set current user from AuthContext (called by AuthContext)
+export const setCurrentUserForUtils = (user) => {
+  currentUser = user;
+};
 
 export const getCurrentUser = () => {
+  // First try to get from our internal state (set by AuthContext)
+  if (currentUser) {
+    return {
+      type: currentUser.userType === 'admin' ? 'admin' : 'subAdmin',
+      data: currentUser
+    };
+  }
+  
+  // Fallback to localStorage for token-based auth (buyer/seller)
   const admin = localStorage.getItem('admin');
   const subAdmin = localStorage.getItem('subAdmin');
   
@@ -20,11 +41,23 @@ export const getUserRoles = () => {
   
   if (user?.type === 'admin') {
     // Admins have access to all roles
-    return ['vendors', 'products', 'categories', 'retailers', 'asks', 'admins'];
+    return ['vendors', 'products', 'categories', 'retailers', 'asks', 'admins', 'roles', 'dashboard'];
   }
   
   if (user?.type === 'subAdmin') {
-    return user.data.roles || user.data.Roles || [];
+    const userData = user.data;
+    const roles = userData.roles || userData.Roles || [];
+    const accessibleTabs = userData.accessibleTabs || userData.AccessibleTabs || [];
+    
+    // Combine roles and accessible tabs
+    const allPermissions = [...roles, ...accessibleTabs];
+    
+    // If user has 'all' access, return all permissions
+    if (allPermissions.includes('all') || allPermissions.includes('admin')) {
+      return ['vendors', 'products', 'categories', 'retailers', 'asks', 'admins', 'roles', 'dashboard'];
+    }
+    
+    return allPermissions;
   }
   
   return [];
@@ -45,7 +78,10 @@ export const getAccessibleTabs = () => {
       products: true,
       categories: true,
       retailers: true,
+      orders: true,
       asks: true,
+      banners: true,
+      roles: true,
       admins: true
     };
   }
@@ -53,13 +89,16 @@ export const getAccessibleTabs = () => {
   if (user?.type === 'subAdmin') {
     const roles = getUserRoles();
     return {
-      dashboard: true, // Dashboard is always accessible
+      dashboard: roles.includes('dashboard') || true, // Dashboard is usually accessible
       vendors: roles.includes('vendors'),
       products: roles.includes('products'),
       categories: roles.includes('categories'),
       retailers: roles.includes('retailers'),
+      orders: roles.includes('orders'),
       asks: roles.includes('asks'),
-      admins: false // SubAdmins cannot access admin management
+      banners: roles.includes('banners'),
+      roles: roles.includes('roles') || roles.includes('admin') || roles.includes('all'),
+      admins: roles.includes('admins') || roles.includes('admin') || roles.includes('all')
     };
   }
   
@@ -69,7 +108,10 @@ export const getAccessibleTabs = () => {
     products: false,
     categories: false,
     retailers: false,
+    orders: false,
     asks: false,
+    banners: false,
+    roles: false,
     admins: false
   };
 };

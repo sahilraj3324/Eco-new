@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../../Vendor/src/Firebase/firebase';
+import { storage } from '../utils/firebase';
 
 export default function EditVendor() {
   const { id } = useParams();
@@ -32,7 +32,6 @@ export default function EditVendor() {
       try {
         setLoading(true);
         const data = await api.seller.getById(id);
-        console.log('Fetched vendor data:', data);
         
         // Ensure all required fields are present with proper types
         setVendor({
@@ -53,7 +52,6 @@ export default function EditVendor() {
         
         setError(null);
       } catch (err) {
-        console.error('Error fetching vendor data:', err);
         setError('Failed to load vendor data. Please try again.');
       } finally {
         setLoading(false);
@@ -74,7 +72,6 @@ export default function EditVendor() {
           setImageUploadProgress(progress);
         },
         (error) => {
-          console.error('Upload error:', error);
           reject(error);
         },
         async () => {
@@ -122,7 +119,6 @@ export default function EditVendor() {
       setSuccessMessage('Profile picture uploaded successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      console.error('Error uploading image:', error);
       setError('Failed to upload image. Please try again.');
     } finally {
       setImageUploading(false);
@@ -176,16 +172,12 @@ export default function EditVendor() {
         Password: vendor.password || null // Only include password if provided
       };
       
-      console.log('Sending payload to updateAllFields API:', payload);
       
       const response = await api.seller.updateAllFields(id, payload);
-      console.log('API response:', response);
       
       setSuccessMessage('Vendor details updated successfully!');
       setTimeout(() => navigate(`/vendors/${id}`), 2000); // Navigate back after 2 seconds
     } catch (err) {
-      console.error('Error updating vendor:', err);
-      console.error('Error response data:', err.response?.data);
       setError(`Failed to update vendor: ${err.response?.data?.message || err.message || 'Unknown error'}`);
     } finally {
       setUpdating(false);

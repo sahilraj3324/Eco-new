@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../api'
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { storage } from '../../../Vendor/src/Firebase/firebase'
+import { storage } from '../utils/firebase'
 import { v4 as uuidv4 } from 'uuid'
 
 export default function EditProduct() {
@@ -80,7 +80,6 @@ export default function EditProduct() {
       try {
         setLoading(true)
         const data = await api.product.getById(id)
-        console.log('Fetched product data:', data)
         
         // Parse variants from the API response
         let variants = []
@@ -114,7 +113,6 @@ export default function EditProduct() {
           try {
             imageUrls = JSON.parse(data.imageUrlsJson)
           } catch (e) {
-            console.warn('Failed to parse imageUrlsJson:', e)
           }
         }
         
@@ -137,14 +135,8 @@ export default function EditProduct() {
           isInitialLoad: true
         }
         
-        console.log('Processed product data:', processedProduct)
-        console.log('Original category name:', data.category)
-        console.log('Original subcategory name:', data.subcategory)
-        console.log('Current product category value:', processedProduct.category)
-        console.log('Current product subcategory value:', processedProduct.subcategory)
         setProduct(processedProduct)
       } catch (err) {
-        console.error('Error fetching product:', err)
         setError(`Failed to load product: ${err.message || 'Unknown error'}`)
       } finally {
         setLoading(false)
@@ -169,13 +161,9 @@ export default function EditProduct() {
         
         // If product is loaded and we have category names, convert them to IDs
         if (product.isInitialLoad && product.originalCategoryName && categoriesData.length > 0) {
-          console.log('Converting category name to ID immediately after categories load')
-          console.log('Looking for category:', product.originalCategoryName)
-          console.log('Available categories:', categoriesData.map(c => ({ id: c.id, name: c.categoryName })))
           
           const matchingCategory = categoriesData.find(cat => cat.categoryName === product.originalCategoryName)
           if (matchingCategory) {
-            console.log('Found matching category immediately:', matchingCategory)
             setProduct(prev => ({
               ...prev,
               category: matchingCategory.id,
@@ -183,7 +171,6 @@ export default function EditProduct() {
               isInitialLoad: false
             }))
           } else {
-            console.warn('No matching category found immediately for:', product.originalCategoryName)
             // Keep the original name if no match found
             setProduct(prev => ({
               ...prev,
@@ -192,7 +179,6 @@ export default function EditProduct() {
           }
         }
       } catch (err) {
-        console.error('Error fetching categories:', err)
         setError('Failed to load categories')
       } finally {
         setLoadingCategories(false)
@@ -205,19 +191,15 @@ export default function EditProduct() {
   // Convert subcategory name to ID after subcategories are loaded
   useEffect(() => {
     if (subcategories.length > 0 && product.originalSubcategoryName && !product.subcategoryIdResolved) {
-      console.log('Converting subcategory name to ID:', product.originalSubcategoryName);
-      console.log('Available subcategories:', subcategories.map(sc => ({ id: sc.id, name: sc.subCategoryName })));
       
       const matchingSubcategory = subcategories.find(subcat => subcat.subCategoryName === product.originalSubcategoryName)
       if (matchingSubcategory) {
-        console.log('Found matching subcategory:', matchingSubcategory);
         setProduct(prev => ({
           ...prev,
           subcategory: matchingSubcategory.id,
           subcategoryIdResolved: true
         }))
       } else {
-        console.warn('No matching subcategory found for:', product.originalSubcategoryName);
       }
     }
   }, [subcategories, product.originalSubcategoryName, product.subcategoryIdResolved])
@@ -226,21 +208,16 @@ export default function EditProduct() {
   useEffect(() => {
     const fetchSubcategories = async () => {
       if (!product.category) {
-        console.log('No category set, clearing subcategories');
         setSubcategories([])
         return
       }
 
-      console.log('Fetching subcategories for category:', product.category);
-      console.log('Category type:', typeof product.category);
       
       // Check if it's a valid GUID
       const isValidGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product.category);
-      console.log('Is it a GUID?', isValidGuid);
 
       // Only fetch subcategories if we have a valid GUID
       if (!isValidGuid) {
-        console.log('Category is not a valid GUID, skipping subcategory fetch');
         return;
       }
 
@@ -249,7 +226,6 @@ export default function EditProduct() {
         const data = await api.subCategory.getByCategoryId(product.category)
         setSubcategories(data)
       } catch (err) {
-        console.error('Error fetching subcategories:', err)
         setSubcategories([])
       } finally {
         setLoadingSubcategories(false)
@@ -397,7 +373,6 @@ export default function EditProduct() {
           const stockValue = parseInt(size.stock) || 0
           const priceValue = parseFloat(size.price) || 0
           
-          console.log(`Processing variant: ${variant.color} ${size.size} - stock: ${size.stock} -> ${stockValue} (${typeof stockValue}), price: ${size.price} -> ${priceValue} (${typeof priceValue})`)
           
           return {
             id: uuidv4(),
@@ -411,13 +386,8 @@ export default function EditProduct() {
       )
 
       // Validate flattened variants
-      console.log('Flattened variants:', flattenedVariants)
       flattenedVariants.forEach((variant, index) => {
-        console.log(`Variant ${index}:`, {
-          ...variant,
-          stockType: typeof variant.stock,
-          priceType: typeof variant.price
-        })
+        // Variant validation logic can be added here if needed
       })
 
       // Calculate total stock
@@ -471,18 +441,6 @@ export default function EditProduct() {
         return;
       }
       
-      console.log('Sending product data:', productData)
-      console.log('Product data keys:', Object.keys(productData))
-      console.log('Product data structure:', {
-        id: productData.id,
-        name: productData.name,
-        category: productData.category,
-        subcategory: productData.subcategory,
-        variants: productData.variants,
-        variantsJson: productData.variantsJson,
-        sellerId: productData.sellerId
-      })
-      
       await api.product.update(id, productData)
       
       setSuccessMessage('✅ Product updated successfully!')
@@ -492,15 +450,12 @@ export default function EditProduct() {
         navigate('/products')
       }, 2000)
     } catch (err) {
-      console.error('Error updating product:', err)
       
       // Extract detailed error information
       let errorMessage = 'Unknown error'
       if (err.response && err.response.data) {
-        console.error('Full error response:', err.response.data)
         
         if (err.response.data.errors) {
-          console.error('Validation errors:', err.response.data.errors)
           
           // Format validation errors for display
           const validationErrors = Object.entries(err.response.data.errors)
@@ -537,7 +492,6 @@ export default function EditProduct() {
           const stockValue = parseInt(size.stock) || 0
           const priceValue = parseFloat(size.price) || 0
           
-          console.log(`Processing variant: ${variant.color} ${size.size} - stock: ${size.stock} -> ${stockValue} (${typeof stockValue}), price: ${size.price} -> ${priceValue} (${typeof priceValue})`)
           
           return {
             id: uuidv4(),
@@ -551,13 +505,8 @@ export default function EditProduct() {
       )
 
       // Validate flattened variants
-      console.log('Flattened variants:', flattenedVariants)
       flattenedVariants.forEach((variant, index) => {
-        console.log(`Variant ${index}:`, {
-          ...variant,
-          stockType: typeof variant.stock,
-          priceType: typeof variant.price
-        })
+        // Variant validation logic can be added here if needed
       })
 
       // Calculate total stock
@@ -606,15 +555,12 @@ export default function EditProduct() {
       setSuccessMessage(`✅ Product ${newValue === 'true' ? 'marked as' : 'unmarked from'} ${field}`)
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (err) {
-      console.error('Error in toggleProductField:', err)
       
       // Extract detailed error information
       let errorMessage = 'Unknown error'
       if (err.response && err.response.data) {
-        console.error('Full error response:', err.response.data)
         
         if (err.response.data.errors) {
-          console.error('Validation errors:', err.response.data.errors)
           
           // Format validation errors for display
           const validationErrors = Object.entries(err.response.data.errors)

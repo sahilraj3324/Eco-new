@@ -74,7 +74,6 @@ export default function Admin() {
       setSubAdmins(subAdminsData || []);
       setRoles(rolesData || []);
     } catch (err) {
-      console.error('Error fetching data:', err);
       setError('Failed to load data. Please try again later.');
     } finally {
       setLoading(false);
@@ -109,7 +108,6 @@ export default function Admin() {
       resetAdminForm();
       setShowAdminForm(false);
     } catch (err) {
-      console.error('Error saving admin:', err);
       alert('Failed to save admin. Please try again.');
     }
   };
@@ -132,7 +130,6 @@ export default function Admin() {
       await api.admin.delete(id);
       fetchData();
     } catch (err) {
-      console.error('Error deleting admin:', err);
       alert('Failed to delete admin. Please try again.');
     }
   };
@@ -187,7 +184,6 @@ export default function Admin() {
       resetSubAdminForm();
       setShowSubAdminForm(false);
     } catch (err) {
-      console.error('Error saving subadmin:', err);
       alert('Failed to save subadmin. Please try again.');
     }
   };
@@ -211,7 +207,6 @@ export default function Admin() {
       await api.subAdmin.delete(id);
       fetchData();
     } catch (err) {
-      console.error('Error deleting subadmin:', err);
       alert('Failed to delete subadmin. Please try again.');
     }
   };
@@ -229,7 +224,6 @@ export default function Admin() {
       await api.subAdmin.updateRoles(subAdminId, updatedRoles);
       fetchData();
     } catch (err) {
-      console.error('Error adding role:', err);
       alert('Failed to add role. Please try again.');
     }
   };
@@ -245,7 +239,6 @@ export default function Admin() {
       await api.subAdmin.updateRoles(subAdminId, updatedRoles);
       fetchData();
     } catch (err) {
-      console.error('Error removing role:', err);
       alert('Failed to remove role. Please try again.');
     }
   };

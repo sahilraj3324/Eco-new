@@ -18,7 +18,6 @@ export default function Orders() {
       const ordersData = await api.order.getAll();
       setOrders(ordersData || []);
     } catch (err) {
-      console.error('Error fetching orders:', err);
       setError('Failed to load orders. Please try again later.');
     } finally {
       setLoading(false);
@@ -30,7 +29,6 @@ export default function Orders() {
       await api.order.updateStatus(orderId, newStatus);
       await fetchOrders(); // Refresh the orders list
     } catch (err) {
-      console.error('Error updating order status:', err);
       alert('Failed to update order status. Please try again.');
     }
   };

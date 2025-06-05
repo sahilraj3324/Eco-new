@@ -35,7 +35,6 @@ export default function Asks() {
       setAsks(formattedAsks)
       setError(null)
     } catch (err) {
-      console.error('Error fetching asks:', err)
       setError('Failed to load customer questions. Please try again later.')
     } finally {
       setLoading(false)
@@ -85,7 +84,6 @@ export default function Asks() {
       setAnsweringId(null)
       setAnswerText('')
     } catch (err) {
-      console.error('Error updating answer:', err)
       alert('Failed to update answer. Please try again.')
     } finally {
       setUpdating(false)

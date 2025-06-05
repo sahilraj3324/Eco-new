@@ -6,6 +6,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
+using Microsoft.AspNetCore.Http;
 
 namespace Backend.Controllers
 {
@@ -22,377 +26,354 @@ namespace Backend.Controllers
             _config = config;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllSubAdmins()
+        // SubAdmin Signup
+        [HttpPost("signup")]
+        public async Task<IActionResult> Signup([FromBody] SubAdminSignupRequest request)
         {
-            var subAdmins = await _context.SubAdmins.ToListAsync();
-            
-            // Fetch all roles to get accessible tabs
-            var allRoles = await _context.Roles.ToListAsync();
-            
-            var result = subAdmins.Select(s => {
-                var roleIds = s.RolesList;
-                var assignedRoles = allRoles.Where(r => roleIds.Contains(r.Id.ToString())).ToList();
-                var accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
-                
-                return new
-                {
-                    s.Id,
-                    s.Name,
-                    s.Email,
-                    s.Phone,
-                    UserType = "subadmin",
-                    Roles = s.RolesList,
-                    AccessibleTabs = accessibleTabs,
-                    AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
-                };
-            }).ToList();
-            
-            return Ok(result);
-        }
+            // Check if subadmin already exists
+            if (await _context.SubAdmins.AnyAsync(u => u.Email == request.Email))
+                return BadRequest(new { message = "SubAdmin already exists" });
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetSubAdminById(Guid id)
-        {
-            var subAdmin = await _context.SubAdmins.FindAsync(id);
-            if (subAdmin == null) return NotFound();
-            
-            // Fetch the actual Role objects to get accessible tabs
-            var roleIds = subAdmin.RolesList;
-            var assignedRoles = new List<Role>();
-            var accessibleTabs = new List<string>();
+            // Hash the password
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            if (roleIds.Any())
-            {
-                assignedRoles = await _context.Roles
-                    .Where(r => roleIds.Contains(r.Id.ToString()))
-                    .ToListAsync();
-
-                // Extract all tabs from assigned roles
-                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
-            }
-            
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                UserType = "subadmin",
-                Roles = subAdmin.RolesList,
-                AccessibleTabs = accessibleTabs,
-                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
-            };
-            
-            return Ok(result);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateSubAdmin([FromBody] SubAdminCreateRequest request)
-        {
+            // Create the subadmin object
             var subAdmin = new SubAdmin
             {
                 Id = Guid.NewGuid(),
                 Name = request.Name,
                 Email = request.Email,
+                PasswordHash = hashedPassword,
                 Phone = request.Phone,
-                Password = request.Password,
-                RolesList = request.Roles ?? new List<string>()
+                UserType = "SubAdmin",
+                RolesList = request.Roles ?? new List<string>() // Assign roles
             };
-            
+
+            // Save to database
             _context.SubAdmins.Add(subAdmin);
             await _context.SaveChangesAsync();
-            
-            // Fetch the actual Role objects to get accessible tabs
-            var roleIds = subAdmin.RolesList;
-            var assignedRoles = new List<Role>();
-            var accessibleTabs = new List<string>();
 
-            if (roleIds.Any())
-            {
-                assignedRoles = await _context.Roles
-                    .Where(r => roleIds.Contains(r.Id.ToString()))
-                    .ToListAsync();
+            // Generate JWT token with no expiry
+            var token = GenerateJwtTokenNoExpiry(subAdmin.Id.ToString(), "SubAdmin", subAdmin.RolesList);
 
-                // Extract all tabs from assigned roles
-                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
-            }
-            
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                UserType = "subadmin",
-                Roles = subAdmin.RolesList,
-                AccessibleTabs = accessibleTabs,
-                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
-            };
-            return Ok(result);
-        }
+            // Set JWT in HTTP-only cookie
+            SetJwtCookie(token);
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSubAdmin(Guid id, [FromBody] SubAdminCreateRequest request)
-        {
-            var subAdmin = await _context.SubAdmins.FindAsync(id);
-            if (subAdmin == null) return NotFound();
+            // Load assigned roles for response
+            await LoadSubAdminRoles(subAdmin);
 
-            // Update all fields
-            subAdmin.Name = request.Name;
-            subAdmin.Email = request.Email;
-            subAdmin.Phone = request.Phone;
-            if (!string.IsNullOrEmpty(request.Password))
-            {
-                subAdmin.Password = request.Password;
-            }
-            subAdmin.RolesList = request.Roles ?? new List<string>();
-
-            await _context.SaveChangesAsync();
-            
-            // Fetch the actual Role objects to get accessible tabs
-            var roleIds = subAdmin.RolesList;
-            var assignedRoles = new List<Role>();
-            var accessibleTabs = new List<string>();
-
-            if (roleIds.Any())
-            {
-                assignedRoles = await _context.Roles
-                    .Where(r => roleIds.Contains(r.Id.ToString()))
-                    .ToListAsync();
-
-                // Extract all tabs from assigned roles
-                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
-            }
-            
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                UserType = "subadmin",
-                Roles = subAdmin.RolesList,
-                AccessibleTabs = accessibleTabs,
-                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
-            };
-            return Ok(result);
-        }
-
-        [HttpPut("{id}/roles")]
-        public async Task<IActionResult> UpdateSubAdminRoles(Guid id, [FromBody] List<string> roles)
-        {
-            var subAdmin = await _context.SubAdmins.FindAsync(id);
-            if (subAdmin == null) return NotFound();
-
-            subAdmin.RolesList = roles ?? new List<string>();
-            await _context.SaveChangesAsync();
-            
-            // Fetch the actual Role objects to get accessible tabs
-            var roleIds = subAdmin.RolesList;
-            var assignedRoles = new List<Role>();
-            var accessibleTabs = new List<string>();
-
-            if (roleIds.Any())
-            {
-                assignedRoles = await _context.Roles
-                    .Where(r => roleIds.Contains(r.Id.ToString()))
-                    .ToListAsync();
-
-                // Extract all tabs from assigned roles
-                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
-            }
-            
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                UserType = "subadmin",
-                Roles = subAdmin.RolesList,
-                AccessibleTabs = accessibleTabs,
-                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
-            };
-            return Ok(result);
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSubAdmin(Guid id)
-        {
-            var subAdmin = await _context.SubAdmins.FindAsync(id);
-            if (subAdmin == null) return NotFound();
-
-            _context.SubAdmins.Remove(subAdmin);
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "SubAdmin deleted." });
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            var subAdmin = await _context.SubAdmins
-                .FirstOrDefaultAsync(s => s.Email == request.Email && s.Password == request.Password);
-
-            if (subAdmin == null)
-                return Unauthorized(new { message = "Invalid credentials" });
-
-            // Fetch the actual Role objects to get accessible tabs
-            var roleIds = subAdmin.RolesList;
-            var assignedRoles = new List<Role>();
-            var accessibleTabs = new List<string>();
-
-            if (roleIds.Any())
-            {
-                assignedRoles = await _context.Roles
-                    .Where(r => roleIds.Contains(r.Id.ToString()))
-                    .ToListAsync();
-
-                // Extract all tabs from assigned roles
-                foreach (var role in assignedRoles)
-                {
-                    accessibleTabs.AddRange(role.Tabs);
-                }
-                
-                // Remove duplicates
-                accessibleTabs = accessibleTabs.Distinct().ToList();
-            }
-
-            var token = GenerateJwtToken(subAdmin.Id.ToString());
-
+            // Return subadmin info without token (since it's in cookie)
             return Ok(new
             {
-                token,
+                message = "SubAdmin created successfully",
                 subAdmin = new
                 {
                     subAdmin.Id,
                     subAdmin.Name,
                     subAdmin.Email,
                     subAdmin.Phone,
-                    UserType = "subadmin",
+                    subAdmin.UserType,
                     Roles = subAdmin.RolesList,
-                    AccessibleTabs = accessibleTabs,
-                    AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
+                    AccessibleTabs = subAdmin.AccessibleTabs
                 }
             });
         }
 
-        [HttpPost("{id}/roles")]
-        public async Task<IActionResult> AddRoleToSubAdmin(Guid id, [FromBody] string role)
+        // SubAdmin Login
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] Models.LoginRequest request)
+        {
+            var subAdmin = await _context.SubAdmins.FirstOrDefaultAsync(u => u.Email == request.Email);
+            
+            if (subAdmin != null && BCrypt.Net.BCrypt.Verify(request.Password, subAdmin.PasswordHash))
+            {
+                // Load assigned roles
+                await LoadSubAdminRoles(subAdmin);
+
+                // Generate JWT token with no expiry and include roles
+                var token = GenerateJwtTokenNoExpiry(subAdmin.Id.ToString(), "SubAdmin", subAdmin.RolesList);
+                
+                // Set JWT in HTTP-only cookie
+                SetJwtCookie(token);
+
+                return Ok(new
+                {
+                    message = "Login successful",
+                    subAdmin = new
+                    {
+                        subAdmin.Id,
+                        subAdmin.Name,
+                        subAdmin.Email,
+                        subAdmin.Phone,
+                        subAdmin.UserType,
+                        Roles = subAdmin.RolesList,
+                        AccessibleTabs = subAdmin.AccessibleTabs
+                    }
+                });
+            }
+
+            return BadRequest(new { message = "Invalid credentials" });
+        }
+
+        // SubAdmin Logout
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            // Clear the JWT cookie
+            Response.Cookies.Delete("SubAdminToken");
+            return Ok(new { message = "Logged out successfully" });
+        }
+
+        // Get all subadmins
+        [HttpGet("get-all")]
+        public async Task<IActionResult> GetAllSubAdmins()
+        {
+            var subAdmins = await _context.SubAdmins.ToListAsync();
+            
+            // Load roles for each subadmin
+            foreach (var subAdmin in subAdmins)
+            {
+                await LoadSubAdminRoles(subAdmin);
+            }
+
+            var result = subAdmins.Select(sa => new {
+                sa.Id,
+                sa.Name,
+                sa.Email,
+                sa.Phone,
+                sa.UserType,
+                Roles = sa.RolesList,
+                AccessibleTabs = sa.AccessibleTabs,
+                sa.CreatedAt
+            });
+            
+            return Ok(result);
+        }
+
+        // Get subadmin by ID
+        [HttpGet("get/{id}")]
+        public async Task<IActionResult> GetSubAdminById(Guid id)
         {
             var subAdmin = await _context.SubAdmins.FindAsync(id);
-            if (subAdmin == null) return NotFound();
+            if (subAdmin == null) return NotFound(new { message = "SubAdmin not found" });
+            
+            // Load assigned roles
+            await LoadSubAdminRoles(subAdmin);
 
-            if (string.IsNullOrWhiteSpace(role))
-                return BadRequest("Role cannot be empty");
-
-            var currentRoles = subAdmin.RolesList;
-            if (!currentRoles.Contains(role))
-            {
-                currentRoles.Add(role);
-                subAdmin.RolesList = currentRoles;
-                await _context.SaveChangesAsync();
-            }
-
-            // Fetch the actual Role objects to get accessible tabs
-            var roleIds = subAdmin.RolesList;
-            var assignedRoles = new List<Role>();
-            var accessibleTabs = new List<string>();
-
-            if (roleIds.Any())
-            {
-                assignedRoles = await _context.Roles
-                    .Where(r => roleIds.Contains(r.Id.ToString()))
-                    .ToListAsync();
-
-                // Extract all tabs from assigned roles
-                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
-            }
-
-            // Return API format
-            var result = new
-            {
+            return Ok(new {
                 subAdmin.Id,
                 subAdmin.Name,
                 subAdmin.Email,
                 subAdmin.Phone,
-                UserType = "subadmin",
+                subAdmin.UserType,
                 Roles = subAdmin.RolesList,
-                AccessibleTabs = accessibleTabs,
-                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
-            };
-            return Ok(result);
+                AccessibleTabs = subAdmin.AccessibleTabs,
+                subAdmin.CreatedAt
+            });
         }
 
-        [HttpDelete("{id}/roles/{role}")]
-        public async Task<IActionResult> RemoveRoleFromSubAdmin(Guid id, string role)
+        // Update subadmin
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateSubAdmin(Guid id, [FromBody] UpdateSubAdminRequest request)
         {
             var subAdmin = await _context.SubAdmins.FindAsync(id);
-            if (subAdmin == null) return NotFound();
+            if (subAdmin == null) return NotFound(new { message = "SubAdmin not found" });
 
-            var currentRoles = subAdmin.RolesList;
-            if (currentRoles.Contains(role))
+            subAdmin.Name = request.Name ?? subAdmin.Name;
+            subAdmin.Email = request.Email ?? subAdmin.Email;
+            subAdmin.Phone = request.Phone ?? subAdmin.Phone;
+
+            if (request.Roles != null)
             {
-                currentRoles.Remove(role);
-                subAdmin.RolesList = currentRoles;
-                await _context.SaveChangesAsync();
+                subAdmin.RolesList = request.Roles;
             }
 
-            // Fetch the actual Role objects to get accessible tabs
-            var roleIds = subAdmin.RolesList;
-            var assignedRoles = new List<Role>();
-            var accessibleTabs = new List<string>();
-
-            if (roleIds.Any())
+            if (!string.IsNullOrEmpty(request.Password))
             {
-                assignedRoles = await _context.Roles
-                    .Where(r => roleIds.Contains(r.Id.ToString()))
-                    .ToListAsync();
-
-                // Extract all tabs from assigned roles
-                accessibleTabs = assignedRoles.SelectMany(r => r.Tabs).Distinct().ToList();
+                subAdmin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
             }
 
-            // Return API format
-            var result = new
-            {
-                subAdmin.Id,
-                subAdmin.Name,
-                subAdmin.Email,
-                subAdmin.Phone,
-                UserType = "subadmin",
-                Roles = subAdmin.RolesList,
-                AccessibleTabs = accessibleTabs,
-                AssignedRoles = assignedRoles.Select(r => new { r.Id, r.Name, r.Tabs }).ToList()
-            };
-            return Ok(result);
+            await _context.SaveChangesAsync();
+            
+            // Load updated roles
+            await LoadSubAdminRoles(subAdmin);
+
+            return Ok(new {
+                message = "SubAdmin updated successfully",
+                subAdmin = new {
+                    subAdmin.Id,
+                    subAdmin.Name,
+                    subAdmin.Email,
+                    subAdmin.Phone,
+                    subAdmin.UserType,
+                    Roles = subAdmin.RolesList,
+                    AccessibleTabs = subAdmin.AccessibleTabs
+                }
+            });
         }
 
-        private string GenerateJwtToken(string userId)
+        // Update subadmin roles only
+        [HttpPut("update-roles/{id}")]
+        public async Task<IActionResult> UpdateSubAdminRoles(Guid id, [FromBody] UpdateRolesRequest request)
         {
-            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "ThisIsAReallyLongSecretKeyForJWTThatIsAtLeast32CharactersLong!");
+            var subAdmin = await _context.SubAdmins.FindAsync(id);
+            if (subAdmin == null) return NotFound(new { message = "SubAdmin not found" });
+
+            subAdmin.RolesList = request.Roles ?? new List<string>();
+            await _context.SaveChangesAsync();
+
+            // Load updated roles
+            await LoadSubAdminRoles(subAdmin);
+
+            return Ok(new {
+                message = "SubAdmin roles updated successfully",
+                subAdmin = new {
+                    subAdmin.Id,
+                    subAdmin.Name,
+                    subAdmin.Email,
+                    Roles = subAdmin.RolesList,
+                    AccessibleTabs = subAdmin.AccessibleTabs
+                }
+            });
+        }
+
+        // Delete subadmin
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteSubAdmin(Guid id)
+        {
+            var subAdmin = await _context.SubAdmins.FindAsync(id);
+            if (subAdmin == null) return NotFound(new { message = "SubAdmin not found" });
+
+            _context.SubAdmins.Remove(subAdmin);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "SubAdmin deleted successfully" });
+        }
+
+        // Verify current subadmin session
+        [HttpGet("verify-session")]
+        public async Task<IActionResult> VerifySession()
+        {
+            var token = Request.Cookies["SubAdminToken"];
+            if (string.IsNullOrEmpty(token))
+                return Unauthorized(new { message = "No session found" });
+
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = Encoding.UTF8.GetBytes("ThisIsAReallyLongSecretKeyForJWTThatIsAtLeast32CharactersLong!");
+                
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = false // No expiry for admin tokens
+                }, out SecurityToken validatedToken);
+
+                var jwtToken = (JwtSecurityToken)validatedToken;
+                var userId = jwtToken.Claims.First(x => x.Type == "id").Value;
+                var userType = jwtToken.Claims.First(x => x.Type == "userType").Value;
+
+                var subAdmin = await _context.SubAdmins.FindAsync(Guid.Parse(userId));
+                if (subAdmin == null)
+                    return Unauthorized(new { message = "Invalid session" });
+
+                // Load roles
+                await LoadSubAdminRoles(subAdmin);
+
+                return Ok(new
+                {
+                    message = "Session valid",
+                    subAdmin = new
+                    {
+                        subAdmin.Id,
+                        subAdmin.Name,
+                        subAdmin.Email,
+                        subAdmin.Phone,
+                        subAdmin.UserType,
+                        Roles = subAdmin.RolesList,
+                        AccessibleTabs = subAdmin.AccessibleTabs
+                    }
+                });
+            }
+            catch
+            {
+                return Unauthorized(new { message = "Invalid session" });
+            }
+        }
+
+        // Helper method to load roles for a subadmin
+        private async Task LoadSubAdminRoles(SubAdmin subAdmin)
+        {
+            if (subAdmin.RolesList.Any())
+            {
+                var roleIds = subAdmin.RolesList.Where(r => Guid.TryParse(r, out _)).Select(Guid.Parse);
+                subAdmin.AssignedRoles = await _context.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
+            }
+        }
+
+        // Generate JWT token with no expiry for subadmin
+        private string GenerateJwtTokenNoExpiry(string userId, string userType, List<string> roles)
+        {
+            var key = Encoding.UTF8.GetBytes("ThisIsAReallyLongSecretKeyForJWTThatIsAtLeast32CharactersLong!");
             var tokenHandler = new JwtSecurityTokenHandler();
+
+            var claims = new List<Claim>
+            {
+                new Claim("id", userId),
+                new Claim("userType", userType),
+                new Claim("roles", string.Join(",", roles))
+            };
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new[] { new Claim("id", userId) }),
-                Expires = DateTime.UtcNow.AddHours(1),
+                Subject = new ClaimsIdentity(claims),
+                // No Expires property = no expiry
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
+        // Set JWT in HTTP-only cookie
+        private void SetJwtCookie(string token)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,        // Prevent JavaScript access
+                Secure = false,         // Set to true in production with HTTPS
+                SameSite = SameSiteMode.Strict,
+                Path = "/",
+                // No expiry time for admin cookies
+            };
+
+            Response.Cookies.Append("SubAdminToken", token, cookieOptions);
+        }
     }
 
-    // DTO for SubAdmin creation/update
-    public class SubAdminCreateRequest
+    // Request models for SubAdmin
+    public class SubAdminSignupRequest
     {
         public string Name { get; set; }
         public string Email { get; set; }
-        public string Phone { get; set; }
         public string Password { get; set; }
+        public string Phone { get; set; }
+        public List<string> Roles { get; set; } = new List<string>();
+    }
+
+    public class UpdateSubAdminRequest
+    {
+        public string Name { get; set; }
+        public string Email { get; set; }
+        public string Password { get; set; }
+        public string Phone { get; set; }
         public List<string> Roles { get; set; }
+    }
+
+    public class UpdateRolesRequest
+    {
+        public List<string> Roles { get; set; } = new List<string>();
     }
 }

@@ -41,7 +41,6 @@ export default function Products() {
           setProducts(data.value)
         } else {
           // If response is not in expected format, set as empty array
-          console.error('Unexpected API response format:', data)
           setProducts([])
           setError('Received invalid data from the server')
         }

@@ -19,6 +19,10 @@ namespace Backend.Models
         public string Phone { get; set; }
 
         [Required]
-        public string Password { get; set; }
+        public string PasswordHash { get; set; }
+
+        public string UserType { get; set; } = "Admin";
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

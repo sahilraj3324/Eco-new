@@ -19,11 +19,9 @@ export default function Vendors() {
       setLoading(true)
       const data = await api.seller.getAll()
       setVendors(data)
-      console.log(data)
       setError(null)
     } catch (err) {
       setError('Failed to fetch vendors. Please try again later.')
-      console.error('Error fetching vendors:', err)
     } finally {
       setLoading(false)
     }

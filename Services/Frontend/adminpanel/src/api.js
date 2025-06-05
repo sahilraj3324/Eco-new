@@ -10,7 +10,8 @@ const proxyAxios = axios.create({
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true  // Enable cookies for all requests
 });
 
 const directAxios = axios.create({
@@ -18,7 +19,8 @@ const directAxios = axios.create({
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true  // Enable cookies for all requests
 });
 
 // Configuration helper for authenticated requests
@@ -32,7 +34,17 @@ const authConfig = () => {
   };
 };
 
-// Helper function to try both proxy and direct approaches
+// Configuration helper for cookie-based requests (Admin/SubAdmin)
+const cookieConfig = () => {
+  return {
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    withCredentials: true, // Important for cookies
+  };
+};
+
+// Helper function to try both approaches
 const tryBothApproaches = async (config) => {
   try {
     // Try proxy first
@@ -46,6 +58,26 @@ const tryBothApproaches = async (config) => {
     } catch (directError) {
       console.log('Direct approach also failed:', directError.message);
       throw directError; // Re-throw the last error
+    }
+  }
+};
+
+// Helper function to try both approaches with cookie support
+const tryBothApproachesWithCookies = async (config) => {
+  try {
+    // Try proxy first with cookies
+    console.log('Trying proxy approach with cookies:', config.url);
+    const proxyConfig = { ...config, withCredentials: true };
+    return await proxyAxios(proxyConfig);
+  } catch (proxyError) {
+    console.log('Proxy approach failed, trying direct:', proxyError.message);
+    try {
+      // Fall back to direct if proxy fails
+      const directConfig = { ...config, withCredentials: true };
+      return await directAxios(directConfig);
+    } catch (directError) {
+      console.log('Direct approach also failed:', directError.message);
+      throw directError;
     }
   }
 };
@@ -1168,20 +1200,33 @@ export const askAdminApi = {
   }
 };
 
-// Admin API calls
+// Admin API calls - Updated for cookie-based authentication
 export const adminApi = {
+  // Admin signup
+  signup: async (adminData) => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'post',
+        url: '/Admin/signup',
+        data: adminData
+      });
+      // No need to store token - it's in cookies
+      return response.data;
+    } catch (error) {
+      console.error('Error during admin signup:', error);
+      throw error;
+    }
+  },
+
   // Admin login
   login: async (credentials) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'post',
         url: '/Admin/login',
         data: credentials
       });
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('admin', JSON.stringify(response.data.admin));
-      }
+      // No need to store token - it's in cookies
       return response.data;
     } catch (error) {
       console.error('Error during admin login:', error);
@@ -1189,13 +1234,42 @@ export const adminApi = {
     }
   },
 
+  // Admin logout
+  logout: async () => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'post',
+        url: '/Admin/logout'
+      });
+      // Clear any localStorage data
+      localStorage.removeItem('admin');
+      return response.data;
+    } catch (error) {
+      console.error('Error during admin logout:', error);
+      throw error;
+    }
+  },
+
+  // Verify session
+  verifySession: async () => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'get',
+        url: '/Admin/verify-session'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying admin session:', error);
+      throw error;
+    }
+  },
+
   // Get all admins
   getAll: async () => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: '/Admin',
-        ...authConfig()
+        url: '/Admin/get-all'
       });
       return response.data;
     } catch (error) {
@@ -1207,10 +1281,9 @@ export const adminApi = {
   // Get admin by id
   getById: async (id) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: `/Admin/${id}`,
-        ...authConfig()
+        url: `/Admin/get/${id}`
       });
       return response.data;
     } catch (error) {
@@ -1219,46 +1292,18 @@ export const adminApi = {
     }
   },
 
-  // Create a new admin
+  // Create a new admin (legacy method name for compatibility)
   create: async (adminData) => {
-    try {
-      // Ensure proper data structure for Admin
-      const formattedData = {
-        Name: adminData.name || adminData.Name,
-        Email: adminData.email || adminData.Email,
-        Phone: adminData.phone || adminData.Phone,
-        Password: adminData.password || adminData.Password
-      };
-      
-      const response = await tryBothApproaches({
-        method: 'post',
-        url: '/Admin',
-        data: formattedData,
-        ...authConfig()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error creating admin:', error);
-      throw error;
-    }
+    return await adminApi.signup(adminData);
   },
 
   // Update an admin
   update: async (id, adminData) => {
     try {
-      // Ensure proper data structure for Admin
-      const formattedData = {
-        Name: adminData.name || adminData.Name,
-        Email: adminData.email || adminData.Email,
-        Phone: adminData.phone || adminData.Phone,
-        Password: adminData.password || adminData.Password
-      };
-      
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'put',
-        url: `/Admin/${id}`,
-        data: formattedData,
-        ...authConfig()
+        url: `/Admin/update/${id}`,
+        data: adminData
       });
       return response.data;
     } catch (error) {
@@ -1270,10 +1315,9 @@ export const adminApi = {
   // Delete an admin
   delete: async (id) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'delete',
-        url: `/Admin/${id}`,
-        ...authConfig()
+        url: `/Admin/delete/${id}`
       });
       return response.data;
     } catch (error) {
@@ -1283,20 +1327,33 @@ export const adminApi = {
   }
 };
 
-// SubAdmin API calls
+// SubAdmin API calls - Updated for cookie-based authentication
 export const subAdminApi = {
+  // SubAdmin signup
+  signup: async (subAdminData) => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'post',
+        url: '/SubAdmin/signup',
+        data: subAdminData
+      });
+      // No need to store token - it's in cookies
+      return response.data;
+    } catch (error) {
+      console.error('Error during subadmin signup:', error);
+      throw error;
+    }
+  },
+
   // SubAdmin login
   login: async (credentials) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'post',
         url: '/SubAdmin/login',
         data: credentials
       });
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('subAdmin', JSON.stringify(response.data.subAdmin));
-      }
+      // No need to store token - it's in cookies
       return response.data;
     } catch (error) {
       console.error('Error during subadmin login:', error);
@@ -1304,23 +1361,44 @@ export const subAdminApi = {
     }
   },
 
+  // SubAdmin logout
+  logout: async () => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'post',
+        url: '/SubAdmin/logout'
+      });
+      // Clear any localStorage data
+      localStorage.removeItem('subAdmin');
+      return response.data;
+    } catch (error) {
+      console.error('Error during subadmin logout:', error);
+      throw error;
+    }
+  },
+
+  // Verify session
+  verifySession: async () => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'get',
+        url: '/SubAdmin/verify-session'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying subadmin session:', error);
+      throw error;
+    }
+  },
+
   // Get all subadmins
   getAll: async () => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: '/SubAdmin',
-        ...authConfig()
+        url: '/SubAdmin/get-all'
       });
-      
-      // Normalize data for frontend compatibility
-      const normalizedData = response.data.map(subAdmin => ({
-        ...subAdmin,
-        roles: subAdmin.Roles || subAdmin.roles || [], // Ensure lowercase roles for frontend
-        Roles: subAdmin.Roles || subAdmin.roles || []   // Keep uppercase for consistency
-      }));
-      
-      return normalizedData;
+      return response.data;
     } catch (error) {
       console.error('Error fetching all subadmins:', error);
       throw error;
@@ -1330,86 +1408,31 @@ export const subAdminApi = {
   // Get subadmin by id
   getById: async (id) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: `/SubAdmin/${id}`,
-        ...authConfig()
+        url: `/SubAdmin/get/${id}`
       });
-      
-      // Normalize data for frontend compatibility
-      const normalizedData = {
-        ...response.data,
-        roles: response.data.Roles || response.data.roles || [],
-        Roles: response.data.Roles || response.data.roles || []
-      };
-      
-      return normalizedData;
+      return response.data;
     } catch (error) {
       console.error(`Error fetching subadmin ${id}:`, error);
       throw error;
     }
   },
 
-  // Create a new subadmin
+  // Create a new subadmin (legacy method name for compatibility)
   create: async (subAdminData) => {
-    try {
-      // Ensure proper data structure for SubAdmin
-      const formattedData = {
-        Name: subAdminData.name || subAdminData.Name,
-        Email: subAdminData.email || subAdminData.Email,
-        Phone: subAdminData.phone || subAdminData.Phone,
-        Password: subAdminData.password || subAdminData.Password,
-        Roles: subAdminData.Roles || subAdminData.roles || []
-      };
-      
-      const response = await tryBothApproaches({
-        method: 'post',
-        url: '/SubAdmin',
-        data: formattedData,
-        ...authConfig()
-      });
-      
-      // Normalize response data for frontend compatibility
-      const normalizedData = {
-        ...response.data,
-        roles: response.data.Roles || response.data.roles || [],
-        Roles: response.data.Roles || response.data.roles || []
-      };
-      
-      return normalizedData;
-    } catch (error) {
-      console.error('Error creating subadmin:', error);
-      throw error;
-    }
+    return await subAdminApi.signup(subAdminData);
   },
 
   // Update a subadmin
   update: async (id, subAdminData) => {
     try {
-      // Ensure proper data structure for SubAdmin
-      const formattedData = {
-        Name: subAdminData.name || subAdminData.Name,
-        Email: subAdminData.email || subAdminData.Email,
-        Phone: subAdminData.phone || subAdminData.Phone,
-        Password: subAdminData.password || subAdminData.Password || "",
-        Roles: subAdminData.Roles || subAdminData.roles || []
-      };
-      
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'put',
-        url: `/SubAdmin/${id}`,
-        data: formattedData,
-        ...authConfig()
+        url: `/SubAdmin/update/${id}`,
+        data: subAdminData
       });
-      
-      // Normalize response data for frontend compatibility
-      const normalizedData = {
-        ...response.data,
-        roles: response.data.Roles || response.data.roles || [],
-        Roles: response.data.Roles || response.data.roles || []
-      };
-      
-      return normalizedData;
+      return response.data;
     } catch (error) {
       console.error(`Error updating subadmin ${id}:`, error);
       throw error;
@@ -1419,21 +1442,12 @@ export const subAdminApi = {
   // Update subadmin roles only
   updateRoles: async (id, roles) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'put',
-        url: `/SubAdmin/${id}/roles`,
-        data: roles,
-        ...authConfig()
+        url: `/SubAdmin/update-roles/${id}`,
+        data: { Roles: roles }
       });
-      
-      // Normalize response data for frontend compatibility
-      const normalizedData = {
-        ...response.data,
-        roles: response.data.Roles || response.data.roles || [],
-        Roles: response.data.Roles || response.data.roles || []
-      };
-      
-      return normalizedData;
+      return response.data;
     } catch (error) {
       console.error(`Error updating subadmin roles ${id}:`, error);
       throw error;
@@ -1443,61 +1457,13 @@ export const subAdminApi = {
   // Delete a subadmin
   delete: async (id) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'delete',
-        url: `/SubAdmin/${id}`,
-        ...authConfig()
+        url: `/SubAdmin/delete/${id}`
       });
       return response.data;
     } catch (error) {
       console.error(`Error deleting subadmin ${id}:`, error);
-      throw error;
-    }
-  },
-
-  // Add role to subadmin
-  addRole: async (id, role) => {
-    try {
-      const response = await tryBothApproaches({
-        method: 'post',
-        url: `/SubAdmin/${id}/roles`,
-        data: JSON.stringify(role),
-        ...authConfig()
-      });
-      
-      // Normalize response data for frontend compatibility
-      const normalizedData = {
-        ...response.data,
-        roles: response.data.Roles || response.data.roles || [],
-        Roles: response.data.Roles || response.data.roles || []
-      };
-      
-      return normalizedData;
-    } catch (error) {
-      console.error(`Error adding role to subadmin ${id}:`, error);
-      throw error;
-    }
-  },
-
-  // Remove role from subadmin
-  removeRole: async (id, role) => {
-    try {
-      const response = await tryBothApproaches({
-        method: 'delete',
-        url: `/SubAdmin/${id}/roles/${role}`,
-        ...authConfig()
-      });
-      
-      // Normalize response data for frontend compatibility
-      const normalizedData = {
-        ...response.data,
-        roles: response.data.Roles || response.data.roles || [],
-        Roles: response.data.Roles || response.data.roles || []
-      };
-      
-      return normalizedData;
-    } catch (error) {
-      console.error(`Error removing role from subadmin ${id}:`, error);
       throw error;
     }
   }
