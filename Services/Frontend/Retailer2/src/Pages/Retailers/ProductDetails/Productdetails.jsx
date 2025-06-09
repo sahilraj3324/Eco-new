@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import fallbackImage from './shirtimage.png';
 import NewProducts from '../Home/Newproduct';
 import { Star, StarHalf, Upload, Image as ImageIcon, X, Loader2, Heart, Share, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuthContext } from '../../../contexts/AuthContext';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -16,6 +17,7 @@ const ProductDetails = () => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const { user, isAuthenticated } = useAuthContext();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -183,12 +185,18 @@ const ProductDetails = () => {
   };
 
   const handleAddToCart = async () => {
+    if (!isAuthenticated || !user) {
+      alert('Please login to add items to your cart');
+      navigate('/retailerlogin');
+      return;
+    }
+
     if (!product || !selectedSize) {
       alert('Please select a size');
       return;
     }
 
-    const userId = localStorage.getItem('Id') || 'guest-user';
+    const userId = user.id;
     const cartItems = [];
 
     console.log('Selected variants:', selectedVariants);
@@ -279,6 +287,7 @@ const ProductDetails = () => {
         const res = await fetch('/api/cart', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(cartItem),
         });
 
@@ -309,9 +318,15 @@ const ProductDetails = () => {
 
   // Wishlist function
   const handleAddToWishlist = async () => {
+    if (!isAuthenticated || !user) {
+      alert('Please login to add items to your wishlist');
+      navigate('/retailerlogin');
+      return;
+    }
+
     if (!product) return;
     setWishlistLoading(true);
-    const userId = localStorage.getItem('Id') || 'guest-user';
+    const userId = user.id;
     const wishlistItem = {
       Id: crypto.randomUUID(),
       UserId: userId,
@@ -323,6 +338,7 @@ const ProductDetails = () => {
       const res = await fetch('/api/wishlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(wishlistItem),
       });
       if (!res.ok) {

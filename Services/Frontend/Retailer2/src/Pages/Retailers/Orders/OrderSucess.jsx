@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, Home, Loader2, Package, Star, Shield, Trophy, Sparkles, Gift, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { useAuthContext } from '../../../contexts/AuthContext';
 
 const OrderSuccessPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthContext();
   const { 
     orderIds, 
     isBulkOrder, 
@@ -21,8 +23,9 @@ const OrderSuccessPage = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStockDetails, setShowStockDetails] = useState(false);
   const [isClearingCart, setIsClearingCart] = useState(false);
+  const [countdown, setCountdown] = useState(10);
 
-  const userId = localStorage.getItem('Id') || "dummy-user-123";
+  const userId = user?.id || "dummy-user-123";
 
   // Clear specific cart items after successful order
   const clearOrderedCartItems = async () => {

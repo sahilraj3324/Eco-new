@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, ArrowLeft, Loader2, Trash2, Plus, Minus, Check, Heart, Star, Package, Truck } from 'lucide-react';
+import { useAuthContext } from '../../../contexts/AuthContext';
 
 const getVariantForCartItem = (item) => {
   if (!item.product || !item.variantId) return null;
@@ -15,16 +16,29 @@ const CartPage = () => {
   const [isRemoving, setIsRemoving] = useState(null);
   const [isClearingCart, setIsClearingCart] = useState(false);
   const navigate = useNavigate();
-
-  const userId = localStorage.getItem('Id') || "dummy-user-123";
+  const { user, isAuthenticated } = useAuthContext();
 
   useEffect(() => {
-    fetchCartItems();
-  }, [userId]);
+    initializeCart();
+  }, []);
 
-  const fetchCartItems = async () => {
+  const initializeCart = async () => {
     try {
-      const res = await fetch(`/api/Cart/user/${userId}`);
+      if (isAuthenticated) {
+        await fetchCartItems(user.id);
+      } else {
+        console.error('User not authenticated');
+        // Handle unauthenticated user - maybe redirect to login
+        navigate('/retailerlogin');
+      }
+    } catch (error) {
+      console.error('Error initializing cart:', error);
+    }
+  };
+
+  const fetchCartItems = async (userIdParam) => {
+    try {
+      const res = await fetch(`/api/Cart/user/${userIdParam}`);
       const data = await res.json();
       setCartItems(data);
     } catch (error) {
@@ -47,7 +61,7 @@ const CartPage = () => {
       await Promise.all(deletePromises);
       
       // Refresh cart items
-      await fetchCartItems();
+      await fetchCartItems(user.id);
       
       console.log('Cart cleared successfully');
     } catch (error) {
@@ -66,7 +80,7 @@ const CartPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newQuantity),
       });
-      fetchCartItems();
+      fetchCartItems(user.id);
     } catch (error) {
       console.error('Error updating quantity:', error);
     }
@@ -78,7 +92,7 @@ const CartPage = () => {
       await fetch(`/api/Cart/${id}`, {
         method: 'DELETE',
       });
-      fetchCartItems();
+      fetchCartItems(user.id);
     } catch (error) {
       console.error('Error deleting item:', error);
     } finally {

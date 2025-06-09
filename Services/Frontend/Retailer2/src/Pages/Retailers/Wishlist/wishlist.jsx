@@ -1,24 +1,40 @@
 import React, { useEffect, useState } from "react";
 import { Heart, ShoppingCart, Trash2, ArrowRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuthContext } from '../../../contexts/AuthContext';
 
 const WishlistPage = () => {
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRemoving, setIsRemoving] = useState(null);
   const [isAddingToCart, setIsAddingToCart] = useState(null);
-  const userId = localStorage.getItem("Id") || "dummy-user-123";
+  const [userId, setUserId] = useState(null);
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthContext();
 
   useEffect(() => {
-    fetchWishlist();
-    // eslint-disable-next-line
-  }, [userId]);
+    initializeWishlist();
+  }, []);
 
-  const fetchWishlist = async () => {
+  const initializeWishlist = async () => {
+    try {
+      const userResult = await getCurrentUser();
+      if (userResult.success) {
+        setUserId(userResult.user.id);
+        await fetchWishlist(userResult.user.id);
+      } else {
+        console.error('User not authenticated');
+        navigate('/retailerlogin');
+      }
+    } catch (error) {
+      console.error('Error initializing wishlist:', error);
+    }
+  };
+
+  const fetchWishlist = async (userIdParam) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/Wishlist/user/${userId}`);
+      const res = await fetch(`/api/Wishlist/user/${userIdParam}`);
       const data = await res.json();
       setWishlist(data);
     } catch (error) {
@@ -34,7 +50,7 @@ const WishlistPage = () => {
       await fetch(`/api/Wishlist/${id}`, {
         method: "DELETE",
       });
-      fetchWishlist();
+      fetchWishlist(userId);
     } catch (error) {
       console.error("Error removing from wishlist:", error);
     } finally {
@@ -67,7 +83,7 @@ const WishlistPage = () => {
       alert(`Added ${item.product.name} to cart!`);
       // Remove from wishlist after adding to cart
       await fetch(`/api/Wishlist/${item.id}`, { method: "DELETE" });
-      fetchWishlist();
+      fetchWishlist(userId);
     } catch (error) {
       console.error("Error adding to cart:", error);
       alert("Failed to add to cart!");

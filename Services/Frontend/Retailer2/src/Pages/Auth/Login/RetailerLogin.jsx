@@ -1,70 +1,87 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../../../contexts/AuthContext';
 import logo from '../../../assets/logo.png';
 
 const RetailerLogin = () => {
+  const [information, setInformation] = useState({
+    Email: "",
+    Password: "",
+  });
 
-    const [information, setInformation] = useState({
-        email: "",
-        password: "",
-      });
-    
-      const [error, setError] = useState("");
-      const [message, setMessage] = useState("");
-      const [loading, setLoading] = useState(false);
-    
-      const navigate = useNavigate();
-    
-      const handleChange = (e) => {
-        setInformation({ ...information, [e.target.name]: e.target.value });
-      };
-    
-      const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
-        setMessage("");
-        setLoading(true);
-    
-        try {
-          const response = await axios.post(
-            "/api/Buyer/login",
-            information,
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-    
-          setMessage("User logged in successfully!");
-    
-          // Save data to localStorage
-          localStorage.setItem("token", response.data.token);
-          localStorage.setItem("Id", response.data.buyer.id);
-          localStorage.setItem("storename", response.data.buyer.storename);
-          localStorage.setItem("email", response.data.buyer.email);
-          localStorage.setItem("hnscode", response.data.buyer.hnscode);
-          localStorage.setItem("phonenumber", response.data.buyer.phoneNumber);
-          localStorage.setItem("pincode", response.data.buyer.pincode);
-          localStorage.setItem("address", response.data.buyer.address);
-          localStorage.setItem("gstnumber", response.data.buyer.gstNumber);
-          localStorage.setItem("profile_picture", response.data.buyer.profile_picture);
-          localStorage.setItem("userType", response.data.buyer.userType);
-    
-          // Clear inputs
-          setInformation({ email: "", password: "" });
-    
-          // Navigate to vendor dashboard
-          navigate("/");
-    
-        } catch (error) {
-          console.error("Login error:", error.response?.data || error.message);
-          setError(error.response?.data?.message || "Login failed. Please try again.");
-        } finally {
-          setLoading(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  const navigate = useNavigate();
+  const { fetchCurrentUser } = useAuthContext();
+
+  const handleChange = (e) => {
+    setInformation({ ...information, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setLoading(true);
+
+    try {
+      console.log('=== Login Attempt Started ===');
+      console.log('Login data:', { Email: information.Email, Password: '[HIDDEN]' });
+      
+      const response = await axios.post(
+        "/api/Buyer/login",
+        information,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true, // Enable cookies
         }
-      };
+      );
+      
+      console.log('Login response received:', response.data);
+      setMessage("Login successful! Checking authentication...");
+
+      // Clear inputs
+      setInformation({ Email: "", Password: "" });
+
+      // Wait a moment for cookie to be set, then refresh auth state
+      setTimeout(async () => {
+        try {
+          console.log('Fetching current user data...');
+          // Refresh the auth context to get user data
+          const userData = await fetchCurrentUser();
+          
+          if (userData) {
+            console.log('User data retrieved successfully:', userData);
+            setMessage("Authentication successful! Redirecting...");
+            navigate("/");
+          } else {
+            console.error('No user data returned from fetchCurrentUser');
+            setError("Failed to get user data after login. Please try again.");
+          }
+        } catch (authError) {
+          console.error('Auth error after login:', authError);
+          setError("Authentication failed after login. Please try logging in again.");
+        }
+      }, 500); // 500ms delay to ensure cookie is set
+
+    } catch (error) {
+      console.error("Login error:", error);
+      if (error.code === 'ERR_NETWORK') {
+        setError("Cannot connect to server. Please make sure the backend is running on https://localhost:7209.");
+      } else if (error.response?.status === 400) {
+        setError(error.response?.data?.message || "Invalid email or password.");
+      } else {
+        setError(error.response?.data?.message || "Login failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4 py-8 sm:px-6 lg:px-8">
@@ -89,20 +106,22 @@ const RetailerLogin = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="email"
-            name="email"
+            name="Email"
             placeholder="Enter your email"
-            value={information.email}
+            value={information.Email}
             onChange={handleChange}
+            autoComplete="email"
             className="w-full px-4 py-3 rounded-full mb-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             required
           />
 
           <input
             type="password"
-            name="password"
+            name="Password"
             placeholder="Enter your password"
-            value={information.password}
+            value={information.Password}
             onChange={handleChange}
+            autoComplete="current-password"
             className="w-full px-4 py-3 rounded-full mb-5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             required
           />
@@ -113,7 +132,7 @@ const RetailerLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-cyan-600 text-white font-bold py-3 rounded hover:bg-cyan-700 transition disabled:opacity-50"
+            className="w-full bg-cyan-600 text-white font-bold py-3 rounded-full hover:bg-cyan-700 transition disabled:opacity-50"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
@@ -121,14 +140,14 @@ const RetailerLogin = () => {
 
         {/* Signup or Support Link */}
         <p className="text-center text-sm text-gray-500">
-          Don’t have an account?{" "}
-          <span className="text-cyan-600 font-semibold cursor-pointer hover:underline">
+          Don't have an account?{" "}
+          <Link to="/retailersignup" className="text-cyan-600 font-semibold cursor-pointer hover:underline">
             Contact support
-          </span>
+          </Link>
         </p>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default RetailerLogin
+export default RetailerLogin;

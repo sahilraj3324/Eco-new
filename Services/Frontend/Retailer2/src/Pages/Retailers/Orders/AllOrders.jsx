@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from 'react';
+import { Package, Eye, FileText, Calendar, MapPin, Phone, User, CreditCard, Truck, CheckCircle, Clock, XCircle } from 'lucide-react';
+import axios from 'axios';
+import { useAuthContext } from '../../../contexts/AuthContext';
 import { useNavigate } from "react-router-dom";
 
 const getVariantForOrder = (order) => {
@@ -9,40 +11,49 @@ const getVariantForOrder = (order) => {
   );
 };
 
-const Allorder = () => {
+const AllOrders = () => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [expandedOrder, setExpandedOrder] = useState(null);
+  const { user, isAuthenticated } = useAuthContext();
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem("Id");
-
-    if (!storedUserId) {
-      setError("Seller ID not found.");
-      setLoading(false);
-      return;
-    }
-
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get(`/api/order/buyer/${storedUserId}`);
-        setOrders(res.data);
-        setFilteredOrders(res.data);
-      } catch (err) {
-        console.error(err.response?.data || err.message || err);
-        setError("Failed to fetch orders.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
+    initializeOrders();
   }, []);
+
+  const initializeOrders = async () => {
+    try {
+      if (isAuthenticated) {
+        await fetchOrders(user.id);
+      } else {
+        setError('User not authenticated');
+      }
+    } catch (error) {
+      console.error('Error initializing orders:', error);
+      setError('Failed to initialize orders');
+    }
+  };
+
+  const fetchOrders = async (userIdParam) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`/api/order/buyer/${userIdParam}`);
+      setOrders(res.data);
+      setFilteredOrders(res.data);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setError('Failed to fetch orders');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = orders;
@@ -122,4 +133,4 @@ const Allorder = () => {
   );
 };
 
-export default Allorder;
+export default AllOrders;

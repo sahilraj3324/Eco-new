@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, CheckCircle2, Package, CreditCard, MapPin, Star, Shield, Truck, Heart } from 'lucide-react';
+import { useAuthContext } from '../../../contexts/AuthContext';
 
 const getVariantForOrderItem = (item) => {
   if (!item.product || !item.variantId) return null;
@@ -12,6 +13,7 @@ const getVariantForOrderItem = (item) => {
 const OrderPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const auth = useAuthContext();
   
   // Handle both single item and bulk orders
   const item = location.state?.item;
@@ -105,7 +107,7 @@ const OrderPage = () => {
         const price = (variant?.price || variant?.Price || currentItem.product?.price || 0);
         
         const order = {
-          buyerId: localStorage.getItem('Id') || 'dummy-user-123',
+          buyerId: auth.user.id,
           productId: currentItem.product.id,
           product: currentItem.product,
           variantId: currentItem.variantId,

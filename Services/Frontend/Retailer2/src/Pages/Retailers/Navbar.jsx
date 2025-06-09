@@ -17,24 +17,27 @@ import {
 } from 'lucide-react';
 import logo from "../../assets/logo.png";
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName , setUserName] = useState("")
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuthContext();
 
   useEffect(() => {
-    const userId = localStorage.getItem('Id');
-    setIsLoggedIn(!!userId);
+    checkAuthentication();
   }, []);
 
-  useEffect(() => {
-    const user = localStorage.getItem('storename');
-    setUserName(user)
-    
-  }, []);
+  const checkAuthentication = async () => {
+    try {
+      setLoading(false);
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setLoading(false);
+    }
+  };
 
   const handleSearch = (e) => {
     if (e.key === "Enter") {
@@ -46,11 +49,25 @@ const Navbar = () => {
     navigate('/retailerlogin');
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('Id');
-    setIsLoggedIn(false);
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <header className="flex flex-col md:flex-row items-center justify-between p-4 bg-white shadow-md rounded-2xl gap-4">
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="EcoCys Logo" className="h-10 w-auto" />
+        </div>
+        <div className="text-gray-500">Loading...</div>
+      </header>
+    );
+  }
 
   return (
     <header className="flex flex-col md:flex-row items-center justify-between p-4 bg-white shadow-md rounded-2xl gap-4 ">
@@ -100,11 +117,11 @@ const Navbar = () => {
           </Link>
         ))}
 
-        {isLoggedIn ? (
+        {isAuthenticated ? (
           <div className="relative group">
             <div className="flex items-center gap-2 cursor-pointer">
               <User size={18} />
-              <span className="font-semibold">{userName}</span>
+              <span className="font-semibold">{user?.storename || ""}</span>
             </div>
 
             {/* Dropdown on hover */}
