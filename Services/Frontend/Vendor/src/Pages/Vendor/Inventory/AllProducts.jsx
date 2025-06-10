@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, Package, AlertCircle, Eye, Edit3, CheckCircle, Clock, Pause, XCircle, ShoppingBag } from "lucide-react";
+import useUser from "../../../hooks/useUser";
 
 const AllProducts = () => {
   const [products, setProducts] = useState([]);
@@ -12,11 +13,12 @@ const AllProducts = () => {
   const [statusFilter, setStatusFilter] = useState("");
 
   const navigate = useNavigate();
+  const { userId, loading: userLoading } = useUser();
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem("Id");
+    if (userLoading) return; // Wait for user data to load
 
-    if (!storedUserId) {
+    if (!userId) {
       setError("Seller ID not found.");
       setLoading(false);
       return;
@@ -24,7 +26,9 @@ const AllProducts = () => {
 
     const fetchProducts = async () => {
       try {
-        const res = await axios.get(`/api/Product/get-by-seller/${storedUserId}`);
+        const res = await axios.get(`/api/Product/get-by-seller/${userId}`, {
+          withCredentials: true
+        });
         setProducts(res.data);
         setFilteredProducts(res.data);
       } catch (err) {
@@ -36,7 +40,7 @@ const AllProducts = () => {
     };
 
     fetchProducts();
-  }, []);
+  }, [userId, userLoading]);
 
   useEffect(() => {
     let filtered = products;
@@ -72,6 +76,18 @@ const AllProducts = () => {
     };
     return configs[status?.toLowerCase()] || configs['active'];
   };
+
+  // Show loading while user data is being fetched
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">

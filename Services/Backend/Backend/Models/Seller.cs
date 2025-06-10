@@ -18,7 +18,9 @@ namespace Backend.Models
         [Required]
         public string PasswordHash { get; set; }
 
-        public long PhoneNumber { get; set; }
+        [Required]
+        [RegularExpression(@"^[6-9]\d{9}$", ErrorMessage = "Phone number must be exactly 10 digits and start with 6, 7, 8, or 9")]
+        public string PhoneNumber { get; set; }
 
         public string Address { get; set; }
 
@@ -26,8 +28,9 @@ namespace Backend.Models
 
         public string UserType { get; set; }  // For example, "Seller"
 
-          // Store name for the seller
-        public long pincode { get; set; }
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "Pincode must be exactly 6 digits")]
+        public string pincode { get; set; }
+        
         public string hnscode { get; set; }
 
         public string profile_picture { get; set; }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import useUser from "../../../hooks/useUser";
 
 const AskAdmin = () => {
   const [question, setQuestion] = useState("");
@@ -11,20 +12,26 @@ const AskAdmin = () => {
   const [userName, setUserName] = useState("");
   const [activeTab, setActiveTab] = useState("ask");
 
+  // Get user data from cookies via useUser hook
+  const { user, loading: userLoading } = useUser();
+
   useEffect(() => {
-    // Get user info from localStorage
-    const storedUserId = localStorage.getItem("Id");
-    const storedUserName = localStorage.getItem("storename") || localStorage.getItem("username") || "Vendor";
-    
-    if (storedUserId) {
-      setUserId(storedUserId);
-      setUserName(storedUserName);
-      fetchQuestions(storedUserId);
+    if (userLoading) {
+      return; // Wait for user data to load
+    }
+
+    if (user) {
+      const userIdValue = user.id || user.sellerId;
+      const userNameValue = user.storeName || user.userName || user.name || "Vendor";
+      
+      setUserId(userIdValue);
+      setUserName(userNameValue);
+      fetchQuestions(userIdValue);
     } else {
       setMessage("❌ User not found. Please login again.");
       setFetchLoading(false);
     }
-  }, []);
+  }, [user, userLoading]);
 
   const fetchQuestions = async (userIdParam) => {
     try {

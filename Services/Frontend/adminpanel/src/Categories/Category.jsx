@@ -130,6 +130,7 @@ export default function CategoryPage() {
             <input
               type="text"
               id="newCategoryName"
+              
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               placeholder="Enter category name"

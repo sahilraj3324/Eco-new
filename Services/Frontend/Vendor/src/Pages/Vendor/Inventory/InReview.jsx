@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, Package, AlertCircle, Eye, Edit3, Clock, FileText } from "lucide-react";
+import useUser from "../../../hooks/useUser";
 
 const InReview = () => {
+  // Get user data from cookies via useUser hook
+  const { user, loading: userLoading } = useUser();
+
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,16 +17,16 @@ const InReview = () => {
 
   const navigate = useNavigate();
 
-  // Step 1: Get seller ID from localStorage
+  // Get seller ID from user data (cookies)
   useEffect(() => {
-    const storedUserId = localStorage.getItem("Id");
-    if (storedUserId) {
-      setSellerid(storedUserId);
-    } else {
+    if (!userLoading && user) {
+      const userIdValue = user.id || user.sellerId;
+      setSellerid(userIdValue);
+    } else if (!userLoading) {
       setLoading(false);
       setError("Seller ID not found.");
     }
-  }, []);
+  }, [user, userLoading]);
 
   // Step 2: Fetch products once seller ID is available
   useEffect(() => {
@@ -61,8 +65,6 @@ const InReview = () => {
   const handleProductClick = (id) => {
     navigate(`/product/${id}`);
   };
-
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">

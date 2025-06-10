@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../../firebase";
@@ -7,6 +7,7 @@ import {
   Plus, Minus, Upload, Image, X, Check, AlertCircle, Loader2, 
   Package, Tag, Palette, Ruler, Shirt, Eye, Save 
 } from "lucide-react";
+import useUser from "../../../hooks/useUser";
 
 const SingleProduct = () => {
   const [sellerId, setSellerId] = useState("");
@@ -64,13 +65,16 @@ const SingleProduct = () => {
     { name: "Olive", value: "#808000" }
   ];
 
+  // Get user data from cookies via useUser hook
+  const { user, loading: userLoading } = useUser();
+
   useEffect(() => {
-    const storedId = localStorage.getItem("Id");
-    if (storedId) {
-      setSellerId(storedId);
+    if (!userLoading && user) {
+      const userIdValue = user.id || user.sellerId;
+      setSellerId(userIdValue);
     }
     fetchCategories();
-  }, []);
+  }, [user, userLoading]);
 
   // Effect to fetch subcategories when category changes
   useEffect(() => {

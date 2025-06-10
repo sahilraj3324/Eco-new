@@ -2,11 +2,15 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Papa from "papaparse";
 import { v4 as uuidv4 } from "uuid";
-import { CloudUpload, FileText, Upload, Image, CheckCircle, AlertCircle, Loader2, Download } from "lucide-react";
+import { CloudUpload, FileText, Upload, Image, CheckCircle, AlertCircle, Loader2, Download, Trash2 } from "lucide-react";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../../firebase";
+import useUser from "../../../hooks/useUser";
 
 const BulkUpload = () => {
+  // Get user data from cookies via useUser hook
+  const { user, loading: userLoading } = useUser();
+
   const [csvFile, setCsvFile] = useState(null);
   const [sellerId, setSellerId] = useState("");
   const [products, setProducts] = useState([]);
@@ -15,11 +19,11 @@ const BulkUpload = () => {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem("Id");
-    if (storedUserId) {
-      setSellerId(storedUserId);
+    if (!userLoading && user) {
+      const userIdValue = user.id || user.sellerId;
+      setSellerId(userIdValue);
     }
-  }, []);
+  }, [user, userLoading]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];

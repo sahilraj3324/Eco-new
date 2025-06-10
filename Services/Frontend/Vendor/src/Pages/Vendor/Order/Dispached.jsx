@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, Package, Clock, AlertCircle, CheckCircle, Truck, XCircle, PackageCheck } from "lucide-react";
+import { Search, Filter, Package, Clock, AlertCircle, CheckCircle, Truck, XCircle, PackageCheck, Eye, MapPin, Calendar, User, Hash } from "lucide-react";
+import useUser from "../../../hooks/useUser";
 
 const getVariantForOrder = (order) => {
   if (!order.product || !order.variantId) return null;
@@ -100,6 +101,9 @@ const ColorIndicator = ({ color, size = 'w-3 h-3' }) => {
 };
 
 const Dispached = () => {
+  // Get user data from cookies via useUser hook
+  const { user, loading: userLoading } = useUser();
+
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,9 +117,11 @@ const Dispached = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem("Id");
+    if (userLoading) {
+      return; // Wait for user data to load
+    }
 
-    if (!storedUserId) {
+    if (!user) {
       setError("Seller ID not found.");
       setLoading(false);
       return;
@@ -123,7 +129,8 @@ const Dispached = () => {
 
     const fetchOrders = async () => {
       try {
-        const res = await axios.get(`/api/order/seller/${storedUserId}`);
+        const userIdValue = user.id || user.sellerId;
+        const res = await axios.get(`/api/order/seller/${userIdValue}`);
         setOrders(res.data);
         setFilteredOrders(res.data);
       } catch (err) {
@@ -135,7 +142,7 @@ const Dispached = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [user, userLoading]);
 
   useEffect(() => {
     let filtered = orders;

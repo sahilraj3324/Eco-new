@@ -4,7 +4,7 @@ import Vendorhome from '../Home/VendorHome';
 import ProductPost from '../ProductPost/ProductPost';
 import Profile from '../Profile/Profile';
 import logo from '../../../assets/logo.png';
-
+import { useAuthContext } from '../../../context/AuthContext';
 
 import PaymentsPage from './PaymentsPage';
 import SellerHome from './SellerHome';
@@ -30,56 +30,25 @@ import {
 const VendorDashboard = () => {
   const [activeSection, setActiveSection] = useState('Home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [name, setName] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
-
-
-  const id = localStorage.getItem('Id');
-  async function fetchUserData() {
-    const responce = await axios.get(`/api/Seller/get/${id}`)
-    const data = responce.data;
-    setName(data.storename);
-  }
-  fetchUserData();
+  const { user, logout, loading, isAuthenticated } = useAuthContext();
 
   useEffect(() => {
     // Check authentication and status
-       const status = localStorage.getItem('Status');
-    if (status !== 'Approved') {
-      navigate('/vendorlogin');
+    if (!isAuthenticated || !user) {
+      navigate('/login');
       return;
     }
-    const id = localStorage.getItem('Id');
-  async function fetchUserData() {
-    const responce = await axios.get(`/api/Seller/get/${id}`)
-    const data = responce.data;
-    console.log(data);
-    setName(data.storename);
-  }
-  fetchUserData();
- console.log(1234);
-    const storename = localStorage.getItem('storename');
-    setName(storename);
-  }, [navigate]);
 
- 
+    if (user.status !== 'Approved') {
+      navigate('/login');
+      return;
+    }
+  }, [isAuthenticated, user, navigate]);
 
-  const handleLogout = () => {
-    // Clear all localStorage data
-    localStorage.removeItem('Id');
-    localStorage.removeItem('storename');
-    localStorage.removeItem('username');
-    localStorage.removeItem('Status');
-    localStorage.removeItem('token');
-    localStorage.removeItem('email');
-    localStorage.removeItem('phone');
-    
-    // Clear any other vendor-related data
-    localStorage.clear();
-    
-    // Redirect to login page
-    navigate('/');
+  const handleLogout = async () => {
+    await logout();
   };
 
   const confirmLogout = () => {
@@ -89,6 +58,20 @@ const VendorDashboard = () => {
   const cancelLogout = () => {
     setShowLogoutModal(false);
   };
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   const sections = [
     { name: 'Home', icon: <Home size={18} />, component: <SellerHome /> },
@@ -161,7 +144,7 @@ const VendorDashboard = () => {
             <button className="bg-gray-200 px-3 py-1 rounded">Need Help?</button>
             <div className="flex items-center gap-1">
               🏪
-              <span className="font-medium">{name}</span>
+              <span className="font-medium">{user?.storename}</span>
             </div>
             <button className="bg-cyan-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-full transition-colors flex items-center space-x-2" onClick={confirmLogout}>
              
@@ -199,9 +182,9 @@ const VendorDashboard = () => {
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 >
-                  Yes, Logout
+                  Logout
                 </button>
               </div>
             </div>

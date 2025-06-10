@@ -61,6 +61,9 @@ namespace Backend.Controllers
             // 🔑 Generate JWT token
             var token = GenerateJwtToken(seller.Id.ToString());
 
+            // 🍪 Set token in cookie
+            SetTokenCookie(token);
+
             // ✅ Return full seller info + token
             return Ok(new
             {
@@ -76,7 +79,8 @@ namespace Backend.Controllers
                     seller.UserType,
                     seller.pincode,
                     seller.hnscode,
-                    seller.profile_picture
+                    seller.profile_picture,
+                    seller.Status
                 }
             });
         }
@@ -94,15 +98,27 @@ namespace Backend.Controllers
             if (seller != null && BCrypt.Net.BCrypt.Verify(request.Password, seller.PasswordHash))
             {
                 var token = GenerateJwtToken(seller.Id.ToString());
+                
+                // 🍪 Set token in cookie
+                SetTokenCookie(token);
+                
                 return Ok(new
                 {
                     token,
                     seller = new
                     {
                         seller.Id,
+                        seller.storename,
+                        seller.Email,
+                        seller.PhoneNumber,
+                        seller.Address,
+                        seller.GstNumber,
                         seller.UserType,
+                        seller.pincode,
+                        seller.hnscode,
+                        seller.profile_picture,
                         seller.Status,
-
+                        seller.CreatedAt
                     }
                 });
             }
@@ -188,11 +204,9 @@ namespace Backend.Controllers
             seller.hnscode = request.hnscode ?? seller.hnscode;
             seller.profile_picture = request.profile_picture ?? seller.profile_picture;
 
-            // Update numeric fields
-            if (request.PhoneNumber.HasValue)
-                seller.PhoneNumber = request.PhoneNumber.Value;
-            if (request.pincode.HasValue)
-                seller.pincode = request.pincode.Value;
+            // Update phone number and pincode as strings
+            seller.PhoneNumber = request.PhoneNumber ?? seller.PhoneNumber;
+            seller.pincode = request.pincode ?? seller.pincode;
 
             // Update password if provided
             if (!string.IsNullOrEmpty(request.Password))
@@ -241,6 +255,57 @@ namespace Backend.Controllers
             return Ok(new { message = "Seller deleted successfully" });
         }
 
+        // Get current user from cookie token
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var token = Request.Cookies["token"];
+            if (string.IsNullOrEmpty(token))
+                return Unauthorized(new { message = "No token found in cookies" });
+
+            try
+            {
+                var userId = ValidateTokenAndGetUserId(token);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(new { message = "Invalid token" });
+
+                var seller = await _context.Sellers.FindAsync(Guid.Parse(userId));
+                if (seller == null)
+                    return NotFound(new { message = "Seller not found" });
+
+                return Ok(new
+                {
+                    seller = new
+                    {
+                        seller.Id,
+                        seller.storename,
+                        seller.Email,
+                        seller.PhoneNumber,
+                        seller.Address,
+                        seller.GstNumber,
+                        seller.UserType,
+                        seller.pincode,
+                        seller.hnscode,
+                        seller.profile_picture,
+                        seller.Status,
+                        seller.CreatedAt
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Token validation failed", error = ex.Message });
+            }
+        }
+
+        // Logout - clear cookie
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("token");
+            return Ok(new { message = "Logged out successfully" });
+        }
+
         // Generate JWT token
         private string GenerateJwtToken(string userId)
         {
@@ -254,6 +319,46 @@ namespace Backend.Controllers
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        // Set token in HTTP-only cookie
+        private void SetTokenCookie(string token)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = DateTime.UtcNow.AddHours(1),
+                Secure = false, // Set to true in production with HTTPS
+                SameSite = SameSiteMode.Strict
+            };
+            Response.Cookies.Append("token", token, cookieOptions);
+        }
+
+        // Validate token and extract user ID
+        private string ValidateTokenAndGetUserId(string token)
+        {
+            try
+            {
+                var key = Encoding.UTF8.GetBytes("ThisIsAReallyLongSecretKeyForJWTThatIsAtLeast32CharactersLong!");
+                var tokenHandler = new JwtSecurityTokenHandler();
+                
+                var validationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+                return principal.FindFirst("id")?.Value;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

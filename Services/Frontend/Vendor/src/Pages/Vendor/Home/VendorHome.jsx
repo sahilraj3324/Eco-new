@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import useUser from "../../../hooks/useUser";
 
 const Vendorhome = () => {
+  // Get user data from cookies via useUser hook
+  const { user, loading: userLoading } = useUser();
   const [username, setUsername] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem("username");
-    if (!storedUsername) {
+    if (userLoading) {
+      return; // Wait for user data to load
+    }
+
+    if (!user) {
       navigate("/startscreen"); // Redirect if no user is logged in
     } else {
-      setUsername(storedUsername);
+      const userNameValue = user.userName || user.storeName || user.name || "Vendor";
+      setUsername(userNameValue);
     }
-  }, [navigate]);
+  }, [user, userLoading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-green-100">

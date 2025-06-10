@@ -266,49 +266,7 @@ export default function Dashboard() {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-4">Dashboard</h1>
         
-        {/* Debug info */}
-        <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-6">
-          <h2 className="font-semibold text-blue-800">Debug Info:</h2>
-          <p className="text-blue-700">User Type: {currentUser?.userType || 'Unknown'}</p>
-          <p className="text-blue-700">User Name: {currentUser?.name || currentUser?.Name || 'Unknown'}</p>
-          <p className="text-blue-700">User Email: {currentUser?.email || currentUser?.Email || 'Unknown'}</p>
-          <p className="text-blue-700">Roles: {JSON.stringify(currentUser?.roles || currentUser?.Roles || [])}</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
-            <h3 className="text-lg font-semibold">Welcome!</h3>
-            <p className="text-sm opacity-90">
-              {currentUser?.userType === 'admin' ? 'Admin Panel' : 'SubAdmin Panel'}
-            </p>
-          </div>
-          
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
-            <h3 className="text-lg font-semibold">Status</h3>
-            <p className="text-sm opacity-90">System Online</p>
-          </div>
-          
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
-            <h3 className="text-lg font-semibold">Auth Type</h3>
-            <p className="text-sm opacity-90">Cookie-based</p>
-          </div>
-          
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white">
-            <h3 className="text-lg font-semibold">Session</h3>
-            <p className="text-sm opacity-90">Active</p>
-          </div>
-        </div>
-
-        {/* User info section */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">User Information</h2>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <pre className="text-sm text-gray-700 overflow-auto">
-              {JSON.stringify(currentUser, null, 2)}
-            </pre>
-          </div>
-        </div>
-
+       
         {/* Main Stats */}
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard 

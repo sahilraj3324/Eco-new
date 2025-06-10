@@ -1,8 +1,11 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import useUser from '../../../hooks/useUser'
 
 const ProductPost = () => {
+    // Get user data from cookies via useUser hook
+    const { user, loading: userLoading } = useUser();
 
     const [sellerid, setSellerid] = useState("");
     const [information, setInformation] = useState({
@@ -15,14 +18,14 @@ const ProductPost = () => {
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Load sellerId from localStorage on component mount
+    // Load sellerId from user data (cookies) on component mount
     useEffect(() => {
-        const storedUserId = localStorage.getItem("userId");
-        if (storedUserId) {
-            setSellerid(storedUserId);
-            setInformation(prev => ({ ...prev, sellerId: storedUserId })); // Update sellerId in information state
+        if (!userLoading && user) {
+            const userIdValue = user.id || user.sellerId;
+            setSellerid(userIdValue);
+            setInformation(prev => ({ ...prev, sellerId: userIdValue })); // Update sellerId in information state
         }
-    }, []);
+    }, [user, userLoading]);
 
     // Handle input changes
     const handleChange = (e) => {

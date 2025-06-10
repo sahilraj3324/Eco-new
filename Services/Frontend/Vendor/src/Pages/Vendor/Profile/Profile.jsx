@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../../../firebase";
+import { useAuthContext } from '../../../context/AuthContext';
 import axios from 'axios';
 
 const Profile = () => {
-  const [userId, setUserId] = useState(null);
-  const [userData, setUserData] = useState(null);
+  const { user, refreshUser, loading: authLoading } = useAuthContext();
   const [editedData, setEditedData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,52 +21,24 @@ const Profile = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
-    const storedId = localStorage.getItem('Id');
-    setUserId(storedId);
-
-    if (storedId) {
-      fetchUserData(storedId);
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchUserData = async (id) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch(`/api/Seller/get/${id}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch user data: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
+    if (user) {
       const formattedData = {
-        id: data.id || id,
-        storename: data.storename || data.store_name || '',
-        gstNumber: data.gstNumber || data.gst_number || '',
-        address: data.address || '',
-        pincode: data.pincode || '',
-        hnscode: data.hnscode || data.hsn_code || '',
-        email: data.email || '',
-        phoneNumber: data.phoneNumber || data.phone || data.phone_number || '',
-        profile_picture: data.profile_picture || data.profileImage || '',
-        status: data.status || data.Status || 'Active',
-        userType: data.userType || 'Vendor'
+        id: user.id,
+        storename: user.storename || '',
+        gstNumber: user.gstNumber || '',
+        address: user.address || '',
+        pincode: user.pincode || '',
+        hnscode: user.hnscode || '',
+        email: user.email || '',
+        phoneNumber: user.phoneNumber || '',
+        profile_picture: user.profile_picture || '',
+        status: user.status || 'Active',
+        userType: user.userType || 'Vendor'
       };
       
-      setUserData(formattedData);
       setEditedData({ ...formattedData });
-    } catch (err) {
-      console.error('Error fetching user data:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [user]);
 
   const handleInputChange = (field, value) => {
     setEditedData(prev => ({
@@ -80,7 +52,7 @@ const Profile = () => {
     
     setUploadingImage(true);
     try {
-      const imageRef = ref(storage, `profile_pictures/${userId}_${Date.now()}_${file.name}`);
+      const imageRef = ref(storage, `profile_pictures/${user.id}_${Date.now()}_${file.name}`);
       const uploadTask = uploadBytesResumable(imageRef, file);
       
       return new Promise((resolve, reject) => {
@@ -134,13 +106,14 @@ const Profile = () => {
         pincode: parseInt(editedData.pincode) || 0
       };
       
-      const response = await axios.put(`/api/Seller/update-all-fields/${userId}`, updateData, {
-        headers: { "Content-Type": "application/json" }
+      const response = await axios.put(`/api/Seller/update-all-fields/${user.id}`, updateData, {
+        headers: { "Content-Type": "application/json" },
+        withCredentials: true
       });
       
       if (response.data && response.data.seller) {
-        setUserData(response.data.seller);
-        setEditedData({ ...response.data.seller });
+        // Refresh user data from the server
+        await refreshUser();
         setMessage("✅ Profile updated successfully!");
         setIsEditing(false);
         setProfileImageFile(null);
@@ -154,7 +127,22 @@ const Profile = () => {
   };
 
   const handleCancel = () => {
-    setEditedData({ ...userData });
+    if (user) {
+      const formattedData = {
+        id: user.id,
+        storename: user.storename || '',
+        gstNumber: user.gstNumber || '',
+        address: user.address || '',
+        pincode: user.pincode || '',
+        hnscode: user.hnscode || '',
+        email: user.email || '',
+        phoneNumber: user.phoneNumber || '',
+        profile_picture: user.profile_picture || '',
+        status: user.status || 'Active',
+        userType: user.userType || 'Vendor'
+      };
+      setEditedData({ ...formattedData });
+    }
     setIsEditing(false);
     setProfileImageFile(null);
     setMessage("");
@@ -169,24 +157,24 @@ const Profile = () => {
     }
   };
 
-  if (!userId) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentication Error</h3>
-          <p className="text-red-600">No user ID found in local storage.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!editedData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Profile Data</h3>
+          <p className="text-red-600">Unable to load profile information.</p>
         </div>
       </div>
     );
@@ -200,23 +188,15 @@ const Profile = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Profile</h3>
           <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={() => fetchUserData(userId)}
+            onClick={() => {
+              if (user) {
+                fetchUserData(user.id);
+              }
+            }}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Retry
           </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 text-center">
-          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Data Available</h3>
-          <p className="text-gray-600">No user data available.</p>
         </div>
       </div>
     );
@@ -234,9 +214,9 @@ const Profile = () => {
             </div>
             
             <div className="mt-4 md:mt-0 flex items-center space-x-4">
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(userData.status)}`}>
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(user.status)}`}>
                 <Shield className="h-4 w-4 inline mr-1" />
-                {userData.status}
+                {user.status}
               </div>
               
               {!isEditing ? (
@@ -335,8 +315,8 @@ const Profile = () => {
                 </div>
                 
                 <div className="mt-4">
-                  <h4 className="text-lg font-semibold text-gray-900">{userData.storename}</h4>
-                  <p className="text-gray-600">{userData.userType}</p>
+                  <h4 className="text-lg font-semibold text-gray-900">{user.storename}</h4>
+                  <p className="text-gray-600">{user.userType}</p>
                 </div>
                 
                 {isEditing && (
@@ -373,7 +353,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {userData.storename || 'Not provided'}
+                      {user.storename || 'Not provided'}
                     </div>
                   )}
                 </div>
@@ -394,7 +374,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {userData.email || 'Not provided'}
+                      {user.email || 'Not provided'}
                     </div>
                   )}
                 </div>
@@ -415,7 +395,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {userData.phoneNumber || 'Not provided'}
+                      {user.phoneNumber || 'Not provided'}
                     </div>
                   )}
                 </div>
@@ -436,7 +416,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {userData.gstNumber || 'Not provided'}
+                      {user.gstNumber || 'Not provided'}
                     </div>
                   )}
                 </div>
@@ -457,7 +437,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {userData.hnscode || 'Not provided'}
+                      {user.hnscode || 'Not provided'}
                     </div>
                   )}
                 </div>
@@ -478,7 +458,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {userData.pincode || 'Not provided'}
+                      {user.pincode || 'Not provided'}
                     </div>
                   )}
                 </div>
@@ -499,7 +479,7 @@ const Profile = () => {
                     />
                   ) : (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {userData.address || 'Not provided'}
+                      {user.address || 'Not provided'}
                     </div>
                   )}
                 </div>

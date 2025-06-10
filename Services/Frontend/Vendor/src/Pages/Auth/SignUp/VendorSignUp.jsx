@@ -57,24 +57,21 @@ const VendorSignUp = () => {
           headers: {
             "Content-Type": "application/json",
           },
+          withCredentials: true, // Enable cookies
         }
       );
       console.log(response.data)
 
       setMessage("User registered successfully!");
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("Id", response.data.seller.id);
-      localStorage.setItem("storename", response.data.seller.storename);
-      localStorage.setItem("email", response.data.seller.email);
-      localStorage.setItem("hnscode", response.data.seller.hnscode);
-      localStorage.setItem("phonenumber", response.data.seller.phoneNumber);
-      localStorage.setItem("pincode", response.data.seller.pincode);
-      localStorage.setItem("address", response.data.seller.address);
-      localStorage.setItem("gstnumber", response.data.seller.gstNumber);
-      localStorage.setItem("profile_picture", response.data.seller.profile_picture);
-      localStorage.setItem("userType", response.data.seller.userType);
 
-      navigate("/");
+      // Check status and navigate accordingly
+      if (response.data.seller.status === "Approved") {
+        navigate("/vendordashboard");
+      } else {
+        // Redirect to a pending approval page or login
+        navigate("/vendorlogin");
+      }
+
     } catch (error) {
       setError(
         error.response?.data?.message || "Failed to register user. Please try again."
