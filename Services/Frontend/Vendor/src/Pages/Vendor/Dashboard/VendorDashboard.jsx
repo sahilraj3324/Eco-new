@@ -141,7 +141,12 @@ const VendorDashboard = () => {
             <span className="font-semibold">Notices</span>
           </div>
           <div className="flex items-center gap-4">
-            <button className="bg-gray-200 px-3 py-1 rounded">Need Help?</button>
+            <button 
+              className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 transition-colors"
+              onClick={() => setActiveSection('Ask Admin')}
+            >
+              Need Help?
+            </button>
             <div className="flex items-center gap-1">
               🏪
               <span className="font-medium">{user?.storename}</span>
@@ -159,7 +164,7 @@ const VendorDashboard = () => {
         </div>
 
         <footer className="bg-gray-200 text-center p-4 mt-auto">
-          © 2025 Your Company. All rights reserved.
+          © 2025 by Ecocys. All rights reserved.
         </footer>
       </div>
 

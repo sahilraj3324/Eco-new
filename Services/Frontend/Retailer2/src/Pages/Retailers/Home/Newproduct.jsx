@@ -48,7 +48,7 @@ const NewProducts = () => {
             <p className="text-center w-full">Loading...</p>
           ) : (
             products
-            .filter((product) => product.status === "In Review" || product.status === "pending")
+            .filter((product) => product.status === "Active")
             .map((product, index) => (
               <Link
                 key={product.id || index}

@@ -22,7 +22,7 @@ const VendorSignUp = () => {
     userType: "vendor",
     gstnumber: "",
     pincode:"",
-    hnscode: "",
+    hnscode: "10a",
     profile_picture:"",
 
   });
@@ -192,7 +192,7 @@ const VendorSignUp = () => {
               className="w-full px-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 mb-2 focus:ring-cyan-400"
             />
             
-            <input
+            {/* <input
               type="text"
               name="hnscode"
               placeholder="HnsCode"
@@ -200,7 +200,7 @@ const VendorSignUp = () => {
               onChange={handleChange}
               className="w-full px-4 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 mb-2 focus:ring-cyan-400"
               required
-            />
+            /> */}
 
             
 

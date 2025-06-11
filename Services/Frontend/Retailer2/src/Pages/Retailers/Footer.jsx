@@ -8,8 +8,6 @@ const footerSections = [
       { label: "Top Products", path: "/top-products" },
       { label: "Trending Products", path: "/trending-products" },
       { label: "New Products", path: "/new-products" },
-      { label: "Find Vendors", path: "/vendors" },
-      { label: "Post Requirements", path: "/post-requirements" },
       { label: "View All", path: "/products" },
     ],
   },
@@ -41,8 +39,8 @@ const footerSections = [
     links: [
       { label: "My Cart", path: "/cart" },
       { label: "My Wishlist", path: "/wishlist" },
-      { label: "My Account", path: "/account" },
-      { label: "Help & Support", path: "/support" },
+      { label: "My Account", path: "/profile" },
+      { label: "Help & Support", path: "/helpSupport" },
     ],
   },
   {

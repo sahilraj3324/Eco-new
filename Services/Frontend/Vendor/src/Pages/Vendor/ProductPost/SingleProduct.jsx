@@ -180,6 +180,9 @@ const SingleProduct = () => {
           variant.sizes = [...variant.sizes, {
             size,
             weight: "",
+            height: "",
+            width: "",
+            length: "",
             stock: "",
             price: ""
           }];
@@ -239,14 +242,24 @@ const SingleProduct = () => {
     }
 
     try {
-      // Upload images
-      const imageUrls = await Promise.all(
-        uploadedImages.map((file) => uploadToFirebase(file, "products"))
+      // Upload all images (main image first, then additional images)
+      const allImagesToUpload = [];
+      
+      // Add main image first if it exists
+      if (mainImageFile) {
+        allImagesToUpload.push(mainImageFile);
+      }
+      
+      // Add additional images
+      allImagesToUpload.push(...uploadedImages);
+
+      // Upload all images
+      const allImageUrls = await Promise.all(
+        allImagesToUpload.map((file) => uploadToFirebase(file, "products"))
       );
 
-      const mainImageUrl = mainImageFile
-        ? await uploadToFirebase(mainImageFile, "products")
-        : "";
+      // Main image is the first one in the array (index 0)
+      const mainImageUrl = allImageUrls.length > 0 ? allImageUrls[0] : "";
 
       // Flatten variants for API
       const flattenedVariants = information.variants.flatMap(variant => 
@@ -255,6 +268,9 @@ const SingleProduct = () => {
           color: variant.color,
           size: size.size,
           weight: size.weight || "",
+          height: Number(size.height) || 0,
+          width: Number(size.width) || 0,
+          length: Number(size.length) || 0,
           stock: size.stock,
           price: Number(size.price) || 0,
           stock2: size.stock // Adding stock2 field as per schema
@@ -291,8 +307,8 @@ const SingleProduct = () => {
         shipsIn: information.shipsIn,
         brand: information.brand,
         mainImage: mainImageUrl,
-        imageUrls: imageUrls,
-        imageUrlsJson: JSON.stringify(imageUrls),
+        imageUrls: allImageUrls,
+        imageUrlsJson: JSON.stringify(allImageUrls),
         variants: flattenedVariants,
         variantsJson: JSON.stringify(flattenedVariants),
         status: "In Review",
@@ -650,6 +666,47 @@ const SingleProduct = () => {
                                     placeholder="0.5"
                                   />
                                 </div>
+
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm)</label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={sizeVariant.height || ""}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'height', e.target.value)}
+                                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                      placeholder="0"
+                                      min="0"
+                                    />
+                                  </div>
+                                  
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Width (cm)</label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={sizeVariant.width || ""}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'width', e.target.value)}
+                                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                      placeholder="0"
+                                      min="0"
+                                    />
+                                  </div>
+                                  
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Length (cm)</label>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={sizeVariant.length || ""}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'length', e.target.value)}
+                                      className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                      placeholder="0"
+                                      min="0"
+                                    />
+                                  </div>
+                                </div>
                                 
                                 <div>
                                   <label className="block text-xs font-medium text-gray-600 mb-1">Stock *</label>
@@ -783,36 +840,40 @@ const SingleProduct = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Order Quantity (MOQ) *</label>
                 <input
-                  type="text"
+                  type="number"
                   name="moq"
                   value={information.moq}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="Minimum order quantity"
+                  min="1"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Pieces per Pack *</label>
                 <input
-                  type="text"
+                  type="number"
                   name="piecesPerPack"
                   value={information.piecesPerPack}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="Number of pieces"
+                  min="1"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ships In * </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ships In (days) *</label>
                 <input
-                  type="text"
+                  type="number"
                   name="shipsIn"
                   value={information.shipsIn}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="e.g., 2-3 days"
+                  placeholder="Number of days (max 99)"
+                  min="1"
+                  max="99"
                 />
               </div>
             </div>

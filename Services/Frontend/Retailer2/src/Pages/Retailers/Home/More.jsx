@@ -17,7 +17,7 @@ const More = () => {
       const res = await fetch('/api/Product/get-all');
       const data = await res.json();
       const sortedProducts = data
-        .filter((product) => product.status === "In Review" || product.status === "pending")
+        .filter((product) => product.status === "Active" )
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       
       setAllProducts(sortedProducts);
@@ -75,7 +75,7 @@ const More = () => {
           {/* Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
             {products
-            .filter((product) => product.status === "In Review" || "pending")
+            .filter((product) => product.status === "Active" )
             .map((product, index) => (
               <Link
                 key={product.id || index}

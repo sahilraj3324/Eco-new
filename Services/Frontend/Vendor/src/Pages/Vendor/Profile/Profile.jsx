@@ -14,7 +14,6 @@ const Profile = () => {
   const [editedData, setEditedData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [profileImageFile, setProfileImageFile] = useState(null);
@@ -40,12 +39,7 @@ const Profile = () => {
     }
   }, [user]);
 
-  const handleInputChange = (field, value) => {
-    setEditedData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+
 
   const handleImageUpload = async (file) => {
     if (!file) return null;
@@ -100,10 +94,7 @@ const Profile = () => {
       }
       
       const updateData = {
-        ...editedData,
-        profile_picture: profileImageUrl,
-        phoneNumber: parseInt(editedData.phoneNumber) || 0,
-        pincode: parseInt(editedData.pincode) || 0
+        profile_picture: profileImageUrl
       };
       
       const response = await axios.put(`/api/Seller/update-all-fields/${user.id}`, updateData, {
@@ -114,13 +105,12 @@ const Profile = () => {
       if (response.data && response.data.seller) {
         // Refresh user data from the server
         await refreshUser();
-        setMessage("✅ Profile updated successfully!");
-        setIsEditing(false);
+        setMessage("✅ Profile picture updated successfully!");
         setProfileImageFile(null);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      setMessage(`❌ Failed to update profile: ${error.response?.data?.message || error.message}`);
+      setMessage(`❌ Failed to update profile picture: ${error.response?.data?.message || error.message}`);
     } finally {
       setSaving(false);
     }
@@ -143,7 +133,6 @@ const Profile = () => {
       };
       setEditedData({ ...formattedData });
     }
-    setIsEditing(false);
     setProfileImageFile(null);
     setMessage("");
   };
@@ -219,15 +208,7 @@ const Profile = () => {
                 {user.status}
               </div>
               
-              {!isEditing ? (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </button>
-              ) : (
+              {profileImageFile && (
                 <div className="flex space-x-2">
                   <button
                     onClick={handleCancel}
@@ -244,12 +225,12 @@ const Profile = () => {
                     {saving ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
+                        Updating...
                       </>
                     ) : (
                       <>
                         <Save className="h-4 w-4 mr-2" />
-                        Save Changes
+                        Update Picture
                       </>
                     )}
                   </button>
@@ -295,17 +276,15 @@ const Profile = () => {
                     className="w-32 h-32 rounded-full object-cover border-4 border-gray-200 shadow-lg"
                   />
                   
-                  {isEditing && (
-                    <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 shadow-lg cursor-pointer hover:bg-blue-700 transition-colors">
-                      <Camera className="h-4 w-4" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfileImageChange}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
+                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 shadow-lg cursor-pointer hover:bg-blue-700 transition-colors">
+                    <Camera className="h-4 w-4" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfileImageChange}
+                      className="hidden"
+                    />
+                  </label>
                   
                   {uploadingImage && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -319,11 +298,9 @@ const Profile = () => {
                   <p className="text-gray-600">{user.userType}</p>
                 </div>
                 
-                {isEditing && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    Click the camera icon to change your profile picture
-                  </p>
-                )}
+                <p className="text-sm text-gray-500 mt-2">
+                  Click the camera icon to change your profile picture
+                </p>
               </div>
             </div>
           </div>
@@ -341,21 +318,11 @@ const Profile = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <Store className="h-4 w-4 inline mr-1" />
-                    Store Name
+                    Trade Name
                   </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedData?.storename || ''}
-                      onChange={(e) => handleInputChange('storename', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter store name"
-                    />
-                  ) : (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {user.storename || 'Not provided'}
-                    </div>
-                  )}
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    {user.storename || 'Not provided'}
+                  </div>
                 </div>
 
                 {/* Email */}
@@ -364,19 +331,9 @@ const Profile = () => {
                     <Mail className="h-4 w-4 inline mr-1" />
                     Email Address
                   </label>
-                  {isEditing ? (
-                    <input
-                      type="email"
-                      value={editedData?.email || ''}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter email address"
-                    />
-                  ) : (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {user.email || 'Not provided'}
-                    </div>
-                  )}
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    {user.email || 'Not provided'}
+                  </div>
                 </div>
 
                 {/* Phone Number */}
@@ -385,19 +342,9 @@ const Profile = () => {
                     <Phone className="h-4 w-4 inline mr-1" />
                     Phone Number
                   </label>
-                  {isEditing ? (
-                    <input
-                      type="tel"
-                      value={editedData?.phoneNumber || ''}
-                      onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter phone number"
-                    />
-                  ) : (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {user.phoneNumber || 'Not provided'}
-                    </div>
-                  )}
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    {user.phoneNumber || 'Not provided'}
+                  </div>
                 </div>
 
                 {/* GST Number */}
@@ -406,19 +353,9 @@ const Profile = () => {
                     <CreditCard className="h-4 w-4 inline mr-1" />
                     GST Number
                   </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedData?.gstNumber || ''}
-                      onChange={(e) => handleInputChange('gstNumber', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter GST number"
-                    />
-                  ) : (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {user.gstNumber || 'Not provided'}
-                    </div>
-                  )}
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    {user.gstNumber || 'Not provided'}
+                  </div>
                 </div>
 
                 {/* HSN Code */}
@@ -427,19 +364,9 @@ const Profile = () => {
                     <Hash className="h-4 w-4 inline mr-1" />
                     HSN Code
                   </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedData?.hnscode || ''}
-                      onChange={(e) => handleInputChange('hnscode', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter HSN code"
-                    />
-                  ) : (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {user.hnscode || 'Not provided'}
-                    </div>
-                  )}
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    {user.hnscode || 'Not provided'}
+                  </div>
                 </div>
 
                 {/* Pincode */}
@@ -448,19 +375,9 @@ const Profile = () => {
                     <MapPin className="h-4 w-4 inline mr-1" />
                     Pincode
                   </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedData?.pincode || ''}
-                      onChange={(e) => handleInputChange('pincode', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter pincode"
-                    />
-                  ) : (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {user.pincode || 'Not provided'}
-                    </div>
-                  )}
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                    {user.pincode || 'Not provided'}
+                  </div>
                 </div>
 
                 {/* Address */}
@@ -469,19 +386,9 @@ const Profile = () => {
                     <Building className="h-4 w-4 inline mr-1" />
                     Address
                   </label>
-                  {isEditing ? (
-                    <textarea
-                      value={editedData?.address || ''}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter complete address"
-                    />
-                  ) : (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      {user.address || 'Not provided'}
-                    </div>
-                  )}
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl min-h-[80px]">
+                    {user.address || 'Not provided'}
+                  </div>
                 </div>
               </div>
             </div>

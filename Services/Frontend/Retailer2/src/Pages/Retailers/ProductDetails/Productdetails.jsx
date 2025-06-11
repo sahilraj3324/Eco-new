@@ -4,6 +4,8 @@ import fallbackImage from './shirtimage.png';
 import NewProducts from '../Home/Newproduct';
 import { Star, StarHalf, Upload, Image as ImageIcon, X, Loader2, Heart, Share, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuthContext } from '../../../contexts/AuthContext';
+import RatingPost from './Ratingpost';
+import RatingShow from './Ratingshow';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -12,10 +14,6 @@ const ProductDetails = () => {
   const [selectedVariants, setSelectedVariants] = useState({});
   const [selectedSize, setSelectedSize] = useState('');
   const navigate = useNavigate();
-  const [reviewImages, setReviewImages] = useState([]);
-  const [reviewText, setReviewText] = useState('');
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const { user, isAuthenticated } = useAuthContext();
 
@@ -434,57 +432,11 @@ const ProductDetails = () => {
     return colorMap[normalizedColor] || colorMap[colorName] || '#6B7280'; // Default to gray-500 if color not found
   };
 
-  // Single dummy review data
-  const dummyReview = {
-    id: 1,
-    user: 'Rahul Sharma',
-    rating: 4.5,
-    date: '2023-10-15',
-    comment: 'The fabric quality is excellent and the stitching is perfect. Fits very well!',
-    images: [
-      'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      'https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-    ]
-  };
-
-  const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newImages = files.map(file => URL.createObjectURL(file));
-    setReviewImages([...reviewImages, ...newImages]);
-  };
-
-  const removeImage = (index) => {
-    const newImages = [...reviewImages];
-    newImages.splice(index, 1);
-    setReviewImages(newImages);
-  };
-
-  const submitReview = () => {
-    // In a real app, you would send this to your backend
-    console.log({
-      rating,
-      comment: reviewText,
-      images: reviewImages
-    });
-    alert('Review submitted successfully!');
-    setReviewText('');
-    setReviewImages([]);
-    setRating(0);
-  };
-
-  const renderStars = (ratingValue) => {
-    return Array(5).fill(0).map((_, i) => {
-      const rating = hoverRating || ratingValue;
-      return (
-        <Star
-          key={i}
-          className={`w-6 h-6 cursor-pointer transition-colors ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-          onMouseEnter={() => setHoverRating(i + 1)}
-          onMouseLeave={() => setHoverRating(0)}
-          onClick={() => setRating(i + 1)}
-        />
-      );
-    });
+  // Callback function for when a review is successfully submitted
+  const handleReviewSubmitted = (reviewData) => {
+    console.log('Review submitted successfully:', reviewData);
+    // You can add additional logic here like showing a success message
+    // or refreshing other parts of the component
   };
 
   if (!product) return (
@@ -1050,14 +1002,7 @@ const ProductDetails = () => {
                   </div>
                   
                   <div className="mt-4 flex justify-between items-center p-4 bg-white rounded-xl border border-gray-200">
-                    <div>
-                      <span className="font-semibold text-black">Status: </span>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        product.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.status}
-                      </span>
-                    </div>
+                    
                     <div>
                       <span className="font-semibold text-black">Total Stock: </span>
                       {(() => {
@@ -1110,157 +1055,38 @@ const ProductDetails = () => {
         </div>
 
         {/* Reviews Section */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden mb-12">
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold text-black">Customer Reviews</h2>
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-cyan-600">4.8</div>
-                  <div className="text-sm text-gray-600">Overall Rating</div>
+        <div className="space-y-8 mb-12">
+          {/* Display Reviews */}
+          <RatingShow productId={product.id} />
+          
+          {/* Write Review Section - Only show if user is logged in */}
+          {isAuthenticated && user ? (
+            <RatingPost 
+              productId={product.id}
+              userId={user.id}
+              onSubmitSuccess={handleReviewSubmitted}
+            />
+          ) : (
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Star className="w-8 h-8 text-gray-400" />
                 </div>
-                <div className="flex flex-col items-center">
-                  <div className="flex space-x-1">
-                    {Array(5).fill(0).map((_, i) => (
-                      <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">124 reviews</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Existing Reviews */}
-            <div className="mb-8">
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                    {dummyReview.user.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold text-black text-lg">{dummyReview.user}</h3>
-                      <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full">
-                        {new Date(dummyReview.date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center mb-3">
-                      <div className="flex space-x-1 mr-3">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-5 h-5 ${i < Math.floor(dummyReview.rating) ? 'fill-yellow-400 text-yellow-400' : 
-                              i === Math.floor(dummyReview.rating) && dummyReview.rating % 1 >= 0.5 ? 'fill-yellow-400 text-yellow-400' : 
-                              'text-gray-300'}`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-gray-600 font-semibold">{dummyReview.rating.toFixed(1)}</span>
-                    </div>
-                    
-                    <p className="text-gray-700 leading-relaxed mb-4">{dummyReview.comment}</p>
-                    
-                    {/* Review Images */}
-                    {dummyReview.images.length > 0 && (
-                      <div className="flex space-x-3">
-                        {dummyReview.images.map((img, idx) => (
-                          <div key={idx} className="w-24 h-24 rounded-xl overflow-hidden border-2 border-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer">
-                            <img src={img} alt={`Review ${idx + 1}`} className="w-full h-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Write Review Section */}
-            <div className="border-t border-gray-200 pt-8">
-              <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl p-6 border border-cyan-200">
-                <h3 className="text-2xl font-bold text-black mb-6 flex items-center">
-                  ✍️ Write Your Review
-                </h3>
-                
-                {/* Rating Input */}
-                <div className="mb-6">
-                  <label className="block text-lg font-semibold text-black mb-3">Your Rating</label>
-                  <div className="flex space-x-2">
-                    {renderStars(rating)}
-                    {rating > 0 && (
-                      <span className="ml-3 text-lg font-semibold text-cyan-600">
-                        {rating} star{rating !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Review Text */}
-                <div className="mb-6">
-                  <label htmlFor="review" className="block text-lg font-semibold text-black mb-3">
-                    Your Review
-                  </label>
-                  <textarea
-                    id="review"
-                    rows="5"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 resize-none text-black"
-                    placeholder="Share your experience with this product... What did you like? How was the quality?"
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                  ></textarea>
-                </div>
-                
-                {/* Image Upload */}
-                <div className="mb-8">
-                  <label className="block text-lg font-semibold text-black mb-3">Add Photos (Optional)</label>
-                  <div className="flex flex-wrap gap-4">
-                    {/* Preview Uploaded Images */}
-                    {reviewImages.map((img, idx) => (
-                      <div key={idx} className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-white shadow-lg">
-                        <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
-                        <button
-                          onClick={() => removeImage(idx)}
-                          className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
-                        >
-                          <X className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                    ))}
-                    
-                    {/* Upload Button */}
-                    {reviewImages.length < 5 && (
-                      <label className="flex flex-col items-center justify-center w-24 h-24 border-3 border-dashed border-cyan-300 rounded-xl cursor-pointer hover:border-cyan-500 hover:bg-cyan-50 transition-all duration-200 bg-white">
-                        <Upload className="w-6 h-6 text-cyan-400 mb-1" />
-                        <span className="text-xs text-cyan-600 font-semibold">Upload</span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          multiple
-                          onChange={handleImageUpload}
-                        />
-                      </label>
-                    )}
-                  </div>
-                  <p className="mt-2 text-sm text-gray-600">📸 You can upload up to 5 images (JPG, PNG)</p>
-                </div>
-                
-                {/* Submit Button */}
+                <h4 className="text-lg font-medium text-gray-900 mb-2">
+                  Want to Write a Review?
+                </h4>
+                <p className="text-gray-600 mb-4">
+                  Please log in to share your experience with this product
+                </p>
                 <button
-                  onClick={submitReview}
-                  disabled={!rating || !reviewText}
-                  className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-200 transform ${
-                    rating && reviewText 
-                      ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white shadow-lg hover:shadow-xl hover:scale-105' 
-                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  }`}
+                  onClick={() => navigate('/retailerlogin')}
+                  className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105"
                 >
-                  {rating && reviewText ? '🚀 Submit Review' : '⚠️ Please rate and write a review'}
+                  Log In to Review
                 </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Related Products */}

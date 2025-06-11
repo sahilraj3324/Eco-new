@@ -99,6 +99,10 @@ export default function EditProduct() {
               size: variant.size || '',
               weight: variant.weight || '',
               stock: variant.stock || 0,
+              stock2: variant.stock2 || 0,
+              height: parseFloat(variant.height) || 0,
+              width: parseFloat(variant.width) || 0,
+              length: parseFloat(variant.length) || 0,
               price: variant.price || 0
             })
           })
@@ -306,6 +310,10 @@ export default function EditProduct() {
             size,
             weight: '',
             stock: '',
+            stock2: '',
+            height: '',
+            width: '',
+            length: '',
             price: ''
           }]
         }
@@ -371,6 +379,10 @@ export default function EditProduct() {
       const flattenedVariants = product.variants.flatMap(variant => 
         variant.sizes.map(size => {
           const stockValue = parseInt(size.stock) || 0
+          const stock2Value = parseInt(size.stock2) || 0
+          const heightValue = parseFloat(size.height) || 0
+          const widthValue = parseFloat(size.width) || 0
+          const lengthValue = parseFloat(size.length) || 0
           const priceValue = parseFloat(size.price) || 0
           
           
@@ -380,6 +392,10 @@ export default function EditProduct() {
             size: size.size || '',
             weight: size.weight || '',
             stock: String(stockValue),  // Convert to string as backend expects
+            stock2: String(stock2Value), // Convert to string as backend expects
+            height: heightValue,
+            width: widthValue,
+            length: lengthValue,
             price: priceValue   // Keep as number for price
           }
         })
@@ -490,6 +506,10 @@ export default function EditProduct() {
       const flattenedVariants = product.variants.flatMap(variant => 
         variant.sizes.map(size => {
           const stockValue = parseInt(size.stock) || 0
+          const stock2Value = parseInt(size.stock2) || 0
+          const heightValue = parseFloat(size.height) || 0
+          const widthValue = parseFloat(size.width) || 0
+          const lengthValue = parseFloat(size.length) || 0
           const priceValue = parseFloat(size.price) || 0
           
           
@@ -499,6 +519,10 @@ export default function EditProduct() {
             size: size.size || '',
             weight: size.weight || '',
             stock: String(stockValue),  // Convert to string as backend expects
+            stock2: String(stock2Value), // Convert to string as backend expects
+            height: heightValue,
+            width: widthValue,
+            length: lengthValue,
             price: priceValue   // Keep as number for price
           }
         })
@@ -881,20 +905,20 @@ export default function EditProduct() {
                       {variant.sizes.length > 0 && (
                         <div className="space-y-4">
                           <h5 className="font-medium">Size Details</h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {variant.sizes.map((sizeVariant, sizeIndex) => (
                               <div key={sizeIndex} className="bg-white rounded border p-3">
                                 <div className="mb-2">
                                   <label className="block text-sm font-medium">Size {sizeVariant.size}</label>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
                                   <div>
                                     <label className="block text-sm text-gray-600">Weight (kg)</label>
                                     <input
                                       type="text"
                                       value={sizeVariant.weight || ''}
                                       onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'weight', e.target.value)}
-                                      className="p-2 border rounded w-full"
+                                      className="p-2 border rounded w-full text-sm"
                                       placeholder="Enter weight"
                                     />
                                   </div>
@@ -904,8 +928,19 @@ export default function EditProduct() {
                                       type="number"
                                       value={sizeVariant.stock || ''}
                                       onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'stock', e.target.value)}
-                                      className="p-2 border rounded w-full"
+                                      className="p-2 border rounded w-full text-sm"
                                       placeholder="Enter stock"
+                                      min="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm text-gray-600">Stock2</label>
+                                    <input
+                                      type="number"
+                                      value={sizeVariant.stock2 || ''}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'stock2', e.target.value)}
+                                      className="p-2 border rounded w-full text-sm"
+                                      placeholder="Enter stock2"
                                       min="0"
                                     />
                                   </div>
@@ -915,8 +950,41 @@ export default function EditProduct() {
                                       type="number"
                                       value={sizeVariant.price || ''}
                                       onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'price', e.target.value)}
-                                      className="p-2 border rounded w-full"
+                                      className="p-2 border rounded w-full text-sm"
                                       placeholder="Enter Price"
+                                      min="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm text-gray-600">Height</label>
+                                    <input
+                                      type="number"
+                                      value={sizeVariant.height || ''}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'height', e.target.value)}
+                                      className="p-2 border rounded w-full text-sm"
+                                      placeholder="Enter height"
+                                      min="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm text-gray-600">Width</label>
+                                    <input
+                                      type="number"
+                                      value={sizeVariant.width || ''}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'width', e.target.value)}
+                                      className="p-2 border rounded w-full text-sm"
+                                      placeholder="Enter width"
+                                      min="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm text-gray-600">Length</label>
+                                    <input
+                                      type="number"
+                                      value={sizeVariant.length || ''}
+                                      onChange={(e) => handleVariantChange(colorIndex, sizeIndex, 'length', e.target.value)}
+                                      className="p-2 border rounded w-full text-sm"
+                                      placeholder="Enter length"
                                       min="0"
                                     />
                                   </div>

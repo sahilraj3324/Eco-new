@@ -40,12 +40,15 @@ const BulkUpload = () => {
           // Parse variants string into array of objects
           const variantStrings = item.variants?.split("|") || [];
           const variants = variantStrings.map((v) => {
-            const [size, color, weight, stock, price] = v.split(",");
+            const [size, color, weight, height, width, length, stock, price] = v.split(",");
             return {
               id: uuidv4(),
               size: size?.trim() || "",
               color: color?.trim() || "",
               weight: weight?.trim() || "",
+              height: Number(height) || 0,
+              width: Number(width) || 0,
+              length: Number(length) || 0,
               stock: stock?.trim() || "",
               price: Number(price) || 0,
               stock2: stock?.trim() || ""
@@ -201,7 +204,7 @@ const BulkUpload = () => {
 
   const downloadTemplate = () => {
     const csvContent = `name,description,price,stock,category,subcategory,brand,material,gst,hsn1,moq,piecesPerPack,fitShape,neckType,occasion,pattern,sleeveLength,shipsIn,minOrderQuantity,variants
-T-Shirt Basic,Comfortable cotton t-shirt,299,100,Clothing,T-Shirts,BrandName,Cotton,5%,6109,10,1,Regular,Round Neck,Casual,Solid,Short Sleeve,2-3 days,1,"S,Red,100g,25,299|M,Red,120g,30,299|L,Red,140g,20,299"`;
+T-Shirt Basic,Comfortable cotton t-shirt,299,100,Clothing,T-Shirts,BrandName,Cotton,5%,6109,10,1,Regular,Round Neck,Casual,Solid,Short Sleeve,2-3 days,1,"S,Red,100g,25,15,30,25,299|M,Red,120g,27,16,32,30,299|L,Red,140g,29,17,34,20,299"`;
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -225,7 +228,7 @@ T-Shirt Basic,Comfortable cotton t-shirt,299,100,Clothing,T-Shirts,BrandName,Cot
 
             {/* Template Download */}
             <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
                   <FileText className="h-5 w-5 text-blue-600 mr-2" />
                   <div>
@@ -240,6 +243,12 @@ T-Shirt Basic,Comfortable cotton t-shirt,299,100,Clothing,T-Shirts,BrandName,Cot
                   <Download className="h-4 w-4 mr-2" />
                   Download Template
                 </button>
+              </div>
+              <div className="text-xs text-blue-700 bg-blue-100 p-3 rounded-lg">
+                <p className="font-medium mb-1">Variant Format:</p>
+                <p>Each variant: <code className="bg-white px-1 rounded">Size,Color,Weight,Height,Width,Length,Stock,Price</code></p>
+                <p>Multiple variants separated by <code className="bg-white px-1 rounded">|</code></p>
+                <p className="mt-1">Example: <code className="bg-white px-1 rounded">S,Red,100g,25,15,30,25,299|M,Blue,120g,27,16,32,30,329</code></p>
               </div>
             </div>
 
@@ -338,9 +347,15 @@ T-Shirt Basic,Comfortable cotton t-shirt,299,100,Clothing,T-Shirts,BrandName,Cot
                             <span className="font-medium text-gray-700 block mb-2">Variants:</span>
                             <div className="flex flex-wrap gap-2">
                               {product.variants.map((variant, i) => (
-                                <span key={i} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
-                                  {variant.size} - {variant.color} (₹{variant.price})
-                                </span>
+                                <div key={i} className="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-xs">
+                                  <div className="font-medium">{variant.size} - {variant.color}</div>
+                                  <div className="text-gray-500">
+                                    {variant.height > 0 || variant.width > 0 || variant.length > 0 
+                                      ? `${variant.height}×${variant.width}×${variant.length}cm`
+                                      : 'No dimensions'
+                                    } - ₹{variant.price}
+                                  </div>
+                                </div>
                               ))}
                             </div>
                           </div>

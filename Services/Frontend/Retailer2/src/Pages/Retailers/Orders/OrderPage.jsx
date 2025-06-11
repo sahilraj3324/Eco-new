@@ -406,7 +406,7 @@ const OrderPage = () => {
                         <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-3 rounded-xl border border-blue-100">
                           <div className="flex items-center gap-2">
                             <Truck className="h-4 w-4 text-blue-600" />
-                            <span className="text-sm font-semibold text-blue-700">Free Shipping</span>
+                          
                           </div>
                         </div>
                       </div>
@@ -475,13 +475,7 @@ const OrderPage = () => {
                   </span>
                   <span className="font-semibold text-lg">₹{totalAmount}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 flex items-center gap-2">
-                    <Truck className="h-4 w-4" />
-                    Shipping
-                  </span>
-                  <span className="font-semibold text-green-600">FREE</span>
-                </div>
+                
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Tax (GST)</span>
                   <span className="font-semibold">₹0</span>

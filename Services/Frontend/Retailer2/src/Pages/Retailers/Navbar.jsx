@@ -23,6 +23,7 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthContext();
 
@@ -52,10 +53,29 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      setIsProfileDropdownOpen(false); // Close dropdown on logout
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
+
+  const toggleProfileDropdown = () => {
+    setIsProfileDropdownOpen(!isProfileDropdownOpen);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.profile-dropdown-container')) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Show loading state while checking authentication
   if (loading) {
@@ -118,27 +138,44 @@ const Navbar = () => {
         ))}
 
         {isAuthenticated ? (
-          <div className="relative group">
-            <div className="flex items-center gap-2 cursor-pointer">
+          <div className="relative profile-dropdown-container">
+            <div 
+              className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors duration-200"
+              onClick={toggleProfileDropdown}
+            >
               <User size={18} />
               <span className="font-semibold">{user?.storename || ""}</span>
             </div>
 
-            {/* Dropdown on hover */}
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border hidden group-hover:block z-50">
-              <Link to="/profile" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
+            {/* Dropdown on click */}
+            <div className={`absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border z-50 transition-all duration-200 ${
+              isProfileDropdownOpen ? 'block opacity-100 translate-y-0' : 'hidden opacity-0 -translate-y-2'
+            }`}>
+              <Link 
+                to="/profile" 
+                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-150"
+                onClick={() => setIsProfileDropdownOpen(false)}
+              >
                 <User size={16} /> My Profile
               </Link>
-              <Link to="/retailerOrder" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
+              <Link 
+                to="/retailerOrder" 
+                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-150"
+                onClick={() => setIsProfileDropdownOpen(false)}
+              >
                 <Package size={16} /> Orders
               </Link>
-              <Link to="/wishlist" className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100">
+              <Link 
+                to="/wishlist" 
+                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-150"
+                onClick={() => setIsProfileDropdownOpen(false)}
+              >
                 <Heart size={16} /> Wishlist
               </Link>
              
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left transition-colors duration-150"
               >
                 <LogOut size={16} /> Logout
               </button>

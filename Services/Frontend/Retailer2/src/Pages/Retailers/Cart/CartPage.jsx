@@ -258,7 +258,7 @@ const CartPage = () => {
                       <p className="text-3xl font-bold text-white">₹{seller.totalAmount}</p>
                       <div className="flex items-center gap-1 mt-1">
                         <Truck className="h-4 w-4 text-green-300" />
-                        <span className="text-green-300 text-sm">Free Shipping</span>
+                        
                       </div>
                     </div>
                   </div>
@@ -457,7 +457,7 @@ const CartPage = () => {
                       <span>{seller.items.length} item{seller.items.length > 1 ? 's' : ''}</span>
                       <div className="flex items-center gap-1">
                         <Truck className="h-3 w-3 text-green-500" />
-                        <span className="text-green-600">Free shipping</span>
+                        
                       </div>
                     </div>
                     <button
@@ -482,13 +482,7 @@ const CartPage = () => {
                   </span>
                   <span className="font-semibold text-lg">₹{totalAmount}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 flex items-center gap-2">
-                    <Truck className="h-4 w-4" />
-                    Shipping
-                  </span>
-                  <span className="font-semibold text-green-600">FREE</span>
-                </div>
+                
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Tax (GST)</span>
                   <span className="font-semibold">₹0</span>

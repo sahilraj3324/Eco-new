@@ -94,45 +94,60 @@ const ProductDetails = () => {
     setTempValues({});
   };
 
-  const handleSaveVariant = async (variant, field) => {
-    const newValue = tempValues[`${variant.id}_${field}`];
+  const handleAddStock = async (variant) => {
+    const addValue = tempValues[`${variant.id}_addstock`];
     
-    if (!newValue || newValue === variant[field]) {
+    if (!addValue || parseInt(addValue) <= 0) {
       handleCancelEdit();
       return;
     }
 
     setUpdateLoading(true);
     try {
-      let endpoint, body;
+      const additionalStock = parseInt(addValue);
+      const newStockValue = parseInt(variant.stock) + additionalStock;
+      const newStock2Value = parseInt(variant.stock2 || 0) + additionalStock;
       
-      if (field === 'stock') {
-        endpoint = `/api/Product/update-variant-stock/${id}/${variant.id}`;
-        body = { newStock: parseInt(newValue) };
-      } else if (field === 'price') {
-        endpoint = `/api/Product/update-variant-price/${id}/${variant.id}`;
-        body = { newPrice: parseFloat(newValue) };
-      }
+      // Update the variant in the product - add to both stock and stock2
+      const updatedVariants = product.variants.map(v => 
+        v.id === variant.id 
+          ? { 
+              ...v, 
+              stock: newStockValue.toString(),
+              stock2: newStock2Value.toString()
+            }
+          : v
+      );
 
-      await axios.put(endpoint, body, {
+      // Calculate new total stock for the product
+      const newTotalStock = updatedVariants.reduce((sum, v) => {
+        return sum + parseInt(v.stock || 0);
+      }, 0);
+
+      // Update the entire product using the general update endpoint
+      const updatedProduct = {
+        ...product,
+        stock: newTotalStock,
+        variants: updatedVariants
+      };
+
+      await axios.put(`/api/Product/update/${id}`, updatedProduct, {
         headers: { "Content-Type": "application/json" }
       });
 
       // Update the local state
       setProduct(prevProduct => ({
         ...prevProduct,
-        variants: prevProduct.variants.map(v => 
-          v.id === variant.id 
-            ? { ...v, [field]: field === 'stock' ? parseInt(newValue) : parseFloat(newValue) }
-            : v
-        )
+        stock: newTotalStock,
+        variants: updatedVariants
       }));
 
       // If this was the selected variant, update it too
       if (selectedVariant?.id === variant.id) {
         setSelectedVariant(prev => ({
           ...prev,
-          [field]: field === 'stock' ? parseInt(newValue) : parseFloat(newValue)
+          stock: newStockValue.toString(),
+          stock2: newStock2Value.toString()
         }));
       }
 
@@ -140,8 +155,8 @@ const ProductDetails = () => {
       setTempValues({});
       
     } catch (err) {
-      console.error(`Error updating variant ${field}:`, err);
-      alert(`Failed to update ${field}. Please try again.`);
+      console.error(`Error adding stock:`, err);
+      alert(`Failed to add stock. Please try again.`);
     } finally {
       setUpdateLoading(false);
     }
@@ -449,6 +464,44 @@ const ProductDetails = () => {
                         <span className="font-medium bg-gray-100 px-2 py-1 rounded text-sm">{variant.weight}</span>
                       </div>
                     )}
+                    
+                    {/* Dimensions */}
+                    {(variant.height || variant.width || variant.length) && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500 text-sm">Dimensions:</span>
+                        <span className="font-medium bg-gray-100 px-2 py-1 rounded text-sm">
+                          {variant.height || 0} × {variant.width || 0} × {variant.length || 0} cm
+                        </span>
+                      </div>
+                    )}
+                    
+                    {variant.height && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500 text-sm">Height:</span>
+                        <span className="font-medium bg-purple-100 px-2 py-1 rounded text-sm text-purple-800">
+                          {variant.height} cm
+                        </span>
+                      </div>
+                    )}
+                    
+                    {variant.width && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500 text-sm">Width:</span>
+                        <span className="font-medium bg-purple-100 px-2 py-1 rounded text-sm text-purple-800">
+                          {variant.width} cm
+                        </span>
+                      </div>
+                    )}
+                    
+                    {variant.length && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500 text-sm">Length:</span>
+                        <span className="font-medium bg-purple-100 px-2 py-1 rounded text-sm text-purple-800">
+                          {variant.length} cm
+                        </span>
+                      </div>
+                    )}
+                    
                     {variant.stock2 && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500 text-sm">Stock2:</span>
@@ -456,100 +509,62 @@ const ProductDetails = () => {
                       </div>
                     )}
                     
-                    {/* Editable Stock */}
+                    {/* Current Stock Display */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-500 text-sm">Stock:</span>
+                      <span className="text-gray-500 text-sm">Current Stock:</span>
+                      <span className="font-medium bg-blue-100 px-2 py-1 rounded text-sm text-blue-800">
+                        {variant.stock}
+                      </span>
+                    </div>
+                    
+                    {/* Add Stock */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 text-sm">Add Stock:</span>
                       <div className="flex items-center space-x-2">
-                        {editingVariant?.id === variant.id && editingVariant?.field === 'stock' ? (
+                        {editingVariant?.id === variant.id && editingVariant?.field === 'addstock' ? (
                           <div className="flex items-center space-x-1">
                             <input
                               type="number"
-                              min="0"
-                              value={tempValues[`${variant.id}_stock`] || ''}
-                              onChange={(e) => handleTempValueChange(variant.id, 'stock', e.target.value)}
-                              className="w-16 px-1 py-1 text-lg border rounded text-center"
+                              min="1"
+                              value={tempValues[`${variant.id}_addstock`] || ''}
+                              onChange={(e) => handleTempValueChange(variant.id, 'addstock', e.target.value)}
+                              className="w-16 px-1 py-1 text-sm border rounded text-center"
+                              placeholder="0"
                               autoFocus
                             />
                             <button
-                              onClick={() => handleSaveVariant(variant, 'stock')}
+                              onClick={() => handleAddStock(variant)}
                               disabled={updateLoading}
-                              className="text-green-600 hover:text-green-800 text-lg font-semibold p-3 background-color-green"
+                              className="text-green-600 hover:text-green-800 text-xs font-semibold px-2 py-1 bg-green-50 rounded"
                             >
-                              Update
+                              Add
                             </button>
                             <button
                               onClick={handleCancelEdit}
-                              className="text-red-600 hover:text-red-800 text-lg font-semibold"
+                              className="text-red-600 hover:text-red-800 text-xs font-semibold px-2 py-1 bg-red-50 rounded"
                             >
                               Cancel
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-1">
-                            <span className="font-medium bg-blue-100 px-2 py-1 rounded text-sm text-blue-800">
-                              {variant.stock}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditVariant(variant, 'stock');
-                              }}
-                              className="text-blue-600 hover:text-blue-800 text-lg font-semibold background-color-blue ml-1"
-                              title="Edit stock"
-                            >
-                              Edit
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditVariant(variant, 'addstock');
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-xs font-semibold px-3 py-1 bg-blue-50 rounded border border-blue-200"
+                            title="Add stock"
+                          >
+                            + Add Stock
+                          </button>
                         )}
                       </div>
                     </div>
                     
-                    {/* Editable Price */}
+                    {/* Price Display */}
                     <div className="flex justify-between items-center">
                       <span className="text-gray-500 text-sm">Price:</span>
-                      <div className="flex items-center space-x-2">
-                        {editingVariant?.id === variant.id && editingVariant?.field === 'price' ? (
-                          <div className="flex items-center space-x-1">
-                            <span className="text-xs">₹</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={tempValues[`${variant.id}_price`] || ''}
-                              onChange={(e) => handleTempValueChange(variant.id, 'price', e.target.value)}
-                              className="w-20 px-1 py-1 text-lg font-semibold border rounded text-center"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleSaveVariant(variant, 'price')}
-                              disabled={updateLoading}
-                              className="text-green-600 hover:text-green-800 text-lg font-semibold p-3 background-color-green"
-                            >
-                              Update
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              className="text-red-600 hover:text-red-800 text-lg font-semibold p-3 background-color-red"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-1">
-                            <span className="font-bold text-green-600">₹{variant.price}</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditVariant(variant, 'price');
-                              }}
-                              className="text-blue-600 hover:text-blue-800 text-lg font-semibold background-color-blue ml-1"
-                              title="Edit price"
-                            >
-                              Edit
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <span className="font-bold text-green-600">₹{variant.price}</span>
                     </div>
                   </div>
                 </div>

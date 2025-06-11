@@ -74,29 +74,7 @@ const AddProduct = () => {
       </div>
 
       {/* Active Tab Description */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center">
-            <div className={`p-2 rounded-lg ${
-              activeTab === "Add Single Product" ? "bg-blue-100" : "bg-green-100"
-            }`}>
-              {React.createElement(tabs[activeTab].icon, { 
-                className: `h-5 w-5 ${
-                  activeTab === "Add Single Product" ? "text-blue-600" : "text-green-600"
-                }`
-              })}
-            </div>
-            <div className="ml-3">
-              <h2 className="text-lg font-medium text-gray-900">
-                {tabs[activeTab].label}
-              </h2>
-              <p className="text-sm text-gray-500">
-                {tabs[activeTab].description}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Content */}
       <div className="max-w-7xl mx-auto">

@@ -63,7 +63,10 @@ const AllProductsPage = () => {
       sleeveLength: new Set(),
     };
 
-    data.forEach((p) => {
+    // Only extract filters from active products
+    const activeProducts = data.filter((product) => product.status === "Active");
+
+    activeProducts.forEach((p) => {
       all.category.add(p.category);
       all.subcategory.add(p.subcategory);
       all.brand.add(p.brand);
@@ -90,6 +93,10 @@ const AllProductsPage = () => {
 
   const applyFilters = () => {
     let result = [...products];
+    
+    // Filter for active products only
+    result = result.filter((product) => product.status === "Active");
+    
     Object.entries(filters).forEach(([key, value]) => {
       if (value) {
         result = result.filter((p) => {
