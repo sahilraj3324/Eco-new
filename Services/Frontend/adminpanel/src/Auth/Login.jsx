@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { adminApi, subAdminApi } from '../api';
@@ -14,6 +14,11 @@ export default function Login() {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Set portal type in localStorage when component mounts
+  useEffect(() => {
+    localStorage.setItem('currentPortal', 'admin');
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -164,6 +169,17 @@ export default function Login() {
                 </svg>
               ) : null}
               {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+
+          {/* Forgot Password Link */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/forgot-password')}
+              className="text-sm font-medium text-cyan-600 hover:text-cyan-500"
+            >
+              Forgot Password?
             </button>
           </div>
 

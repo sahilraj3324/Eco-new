@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../../contexts/AuthContext';
@@ -16,6 +16,11 @@ const RetailerLogin = () => {
   
   const navigate = useNavigate();
   const { fetchCurrentUser } = useAuthContext();
+
+  // Set portal type in localStorage when component mounts
+  useEffect(() => {
+    localStorage.setItem('currentPortal', 'retailer');
+  }, []);
 
   const handleChange = (e) => {
     setInformation({ ...information, [e.target.name]: e.target.value });
@@ -137,6 +142,13 @@ const RetailerLogin = () => {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
+        {/* Forgot Password Link */}
+        <div className="text-center">
+          <Link to="/forgot-password" className="text-cyan-600 text-sm font-medium hover:underline">
+            Forgot Password?
+          </Link>
+        </div>
 
         {/* Signup or Support Link */}
         <p className="text-center text-sm text-gray-500">

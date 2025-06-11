@@ -310,7 +310,7 @@ namespace Backend.Controllers
             if (subAdmin.RolesList.Any())
             {
                 var roleIds = subAdmin.RolesList.Where(r => Guid.TryParse(r, out _)).Select(Guid.Parse);
-                subAdmin.AssignedRoles = await _context.Roles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
+                subAdmin.AssignedRoles = await _context.CustomRoles.Where(r => roleIds.Contains(r.Id)).ToListAsync();
             }
         }
 

@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from './contexts/AuthContext';
 import RetailerSignup from './Pages/Auth/SignUp/RetailerSignup';
 import RetailerLogin from './Pages/Auth/Login/RetailerLogin';
+import ForgotPassword from './Pages/PasswordReset/ForgotPassword';
 
 import HomePage from './Pages/Retailers/Home/Homepage';
 import ProductDetails from './Pages/Retailers/ProductDetails/Productdetails';
@@ -36,6 +37,7 @@ function App() {
         <Routes>
           <Route path="/retailerSignup" element={< RetailerSignup/>} />
           <Route path="/retailerLogin" element={< RetailerLogin/>} />
+          <Route path="/forgot-password" element={< ForgotPassword/>} />
           <Route path="/" element={< HomePage/>} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/profile" element={<Profile />} />

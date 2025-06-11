@@ -22,7 +22,7 @@ namespace Backend.Controllers
         {
             try
             {
-                var roles = await _context.Roles.OrderBy(r => r.Name).ToListAsync();
+                var roles = await _context.CustomRoles.OrderBy(r => r.Name).ToListAsync();
                 return Ok(roles);
             }
             catch (Exception ex)
@@ -37,7 +37,7 @@ namespace Backend.Controllers
         {
             try
             {
-                var role = await _context.Roles.FindAsync(id);
+                var role = await _context.CustomRoles.FindAsync(id);
                 if (role == null)
                 {
                     return NotFound(new { message = "Role not found" });
@@ -63,7 +63,7 @@ namespace Backend.Controllers
                 }
 
                 // Check if role name already exists
-                var existingRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name.ToLower() == role.Name.ToLower());
+                var existingRole = await _context.CustomRoles.FirstOrDefaultAsync(r => r.Name.ToLower() == role.Name.ToLower());
                 if (existingRole != null)
                 {
                     return BadRequest(new { message = "Role name already exists" });
@@ -73,7 +73,7 @@ namespace Backend.Controllers
                 role.CreatedAt = DateTime.UtcNow;
                 role.UpdatedAt = DateTime.UtcNow;
 
-                _context.Roles.Add(role);
+                _context.CustomRoles.Add(role);
                 await _context.SaveChangesAsync();
 
                 return CreatedAtAction(nameof(GetRole), new { id = role.Id }, role);
@@ -100,14 +100,14 @@ namespace Backend.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var existingRole = await _context.Roles.FindAsync(id);
+                var existingRole = await _context.CustomRoles.FindAsync(id);
                 if (existingRole == null)
                 {
                     return NotFound(new { message = "Role not found" });
                 }
 
                 // Check if role name already exists (excluding current role)
-                var duplicateRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name.ToLower() == role.Name.ToLower() && r.Id != id);
+                var duplicateRole = await _context.CustomRoles.FirstOrDefaultAsync(r => r.Name.ToLower() == role.Name.ToLower() && r.Id != id);
                 if (duplicateRole != null)
                 {
                     return BadRequest(new { message = "Role name already exists" });
@@ -132,7 +132,7 @@ namespace Backend.Controllers
         {
             try
             {
-                var role = await _context.Roles.FindAsync(id);
+                var role = await _context.CustomRoles.FindAsync(id);
                 if (role == null)
                 {
                     return NotFound(new { message = "Role not found" });
@@ -148,7 +148,7 @@ namespace Backend.Controllers
                     return BadRequest(new { message = "Cannot delete role. It is assigned to one or more SubAdmins." });
                 }
 
-                _context.Roles.Remove(role);
+                _context.CustomRoles.Remove(role);
                 await _context.SaveChangesAsync();
 
                 return NoContent();
@@ -165,7 +165,7 @@ namespace Backend.Controllers
         {
             try
             {
-                var role = await _context.Roles.FindAsync(id);
+                var role = await _context.CustomRoles.FindAsync(id);
                 if (role == null)
                 {
                     return NotFound(new { message = "Role not found" });

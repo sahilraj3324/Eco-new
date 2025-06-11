@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Import components with error handling
 import VendorLogin from './Pages/Auth/Login/VendorLogin';
 import VendorSignUp from './Pages/Auth/SignUp/VendorSignUp';
+import ForgotPassword from './Pages/Auth/ForgotPassword/ForgotPassword';
 
 // Lazy load heavy components to prevent initial load errors
 const VendorDashboard = React.lazy(() => import('./Pages/Vendor/Dashboard/VendorDashboard'));
@@ -34,6 +35,7 @@ function App() {
             <Route path="/signup" element={<VendorSignUp/>} />
             <Route path="/vendorsignup" element={<VendorSignUp/>} />
             <Route path="/login" element={<VendorLogin/>} />
+            <Route path="/forgot-password" element={<ForgotPassword/>} />
             
             {/* Default route - redirect to login */}
             <Route path="/" element={<Navigate to="/login" replace />} />

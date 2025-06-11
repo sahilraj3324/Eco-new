@@ -1,5 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
+using Backend.Models;
+using Backend.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Backend
 {
@@ -42,6 +49,40 @@ namespace Backend
                     options.EnableSensitiveDataLogging(); // For development debugging
                     options.EnableDetailedErrors(); // For development debugging
                 });
+
+                // Identity & Auth setup
+                builder.Services.AddIdentityCore<AppUser>(opts =>
+                {
+                    opts.Password.RequireDigit = true;
+                    opts.Password.RequiredLength = 8;
+                    opts.Password.RequireNonAlphanumeric = false;
+                    opts.Password.RequireUppercase = false;
+                    opts.Password.RequireLowercase = false;
+                })
+                .AddRoles<IdentityRole<Guid>>()
+                .AddEntityFrameworkStores<EcoContext>();
+
+                // Authentication schemes
+                builder.Services.AddAuthentication()
+                    .AddCookie("AdminScheme")
+                    .AddJwtBearer("VendorScheme", opts =>
+                    {
+                        var jwt = builder.Configuration.GetSection("Jwt");
+                        opts.TokenValidationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuer = true,
+                            ValidIssuer = jwt["Issuer"],
+                            ValidateAudience = true,
+                            ValidAudience = jwt["Audience"],
+                            ValidateLifetime = true,
+                            IssuerSigningKey = new SymmetricSecurityKey(
+                                Encoding.UTF8.GetBytes(jwt["Key"] ?? throw new ArgumentException("JWT Key not configured")))
+                        };
+                    });
+
+                // Register Twilio & Reset services
+                builder.Services.AddTransient<ITwilioVerify, TwilioVerify>();
+                builder.Services.AddTransient<IPasswordResetService, PasswordResetService>();
 
                 // Add CORS policy
                 builder.Services.AddCors(options =>
@@ -107,6 +148,8 @@ namespace Backend
                 // Enable CORS
                 app.UseCors("AllowFrontend");
 
+                // Authentication middleware
+                app.UseAuthentication();
                 app.UseAuthorization();
 
                 app.MapControllers();
