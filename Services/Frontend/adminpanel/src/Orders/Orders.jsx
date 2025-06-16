@@ -6,19 +6,30 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, pending, confirmed, delivered, cancelled
+  const [users, setUsers] = useState([]); // Store users data to resolve names
+  const [products, setProducts] = useState([]); // Store products data to resolve names
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrdersAndRelatedData();
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrdersAndRelatedData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const ordersData = await api.order.getAll();
+      // Fetch all data in parallel
+      const [ordersData, usersData, productsData] = await Promise.all([
+        api.order.getAll(),
+        api.user.getAll().catch(() => []), // Graceful fallback if users API fails
+        api.product.getAll().catch(() => []) // Graceful fallback if products API fails
+      ]);
+
       setOrders(ordersData || []);
+      setUsers(usersData || []);
+      setProducts(productsData || []);
     } catch (err) {
       setError('Failed to load orders. Please try again later.');
+      console.error('Error fetching orders data:', err);
     } finally {
       setLoading(false);
     }
@@ -27,10 +38,45 @@ export default function Orders() {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       await api.order.updateStatus(orderId, newStatus);
-      await fetchOrders(); // Refresh the orders list
+      await fetchOrdersAndRelatedData(); // Refresh the orders list
     } catch (err) {
       alert('Failed to update order status. Please try again.');
     }
+  };
+
+  // Helper function to get user name by ID
+  const getUserName = (userId) => {
+    if (!userId) return 'N/A';
+    const user = users.find(u => u.id === userId);
+    return user ? (user.name || user.username || user.email || 'Unknown User') : userId;
+  };
+
+  // Helper function to get product name by ID
+  const getProductName = (productId) => {
+    if (!productId) return 'N/A';
+    const product = products.find(p => p.id === productId);
+    return product ? (product.name || 'Unknown Product') : productId;
+  };
+
+  // Enhanced function to get buyer name
+  const getBuyerName = (order) => {
+    if (order.buyerName) return order.buyerName;
+    if (order.buyerId) return getUserName(order.buyerId);
+    return 'N/A';
+  };
+
+  // Enhanced function to get seller name  
+  const getSellerName = (order) => {
+    if (order.sellerName) return order.sellerName;
+    if (order.sellerId) return getUserName(order.sellerId);
+    return 'N/A';
+  };
+
+  // Enhanced function to get product name
+  const getOrderProductName = (order) => {
+    if (order.productName) return order.productName;
+    if (order.productId) return getProductName(order.productId);
+    return 'N/A';
   };
 
   const getStatusBadgeColor = (status) => {
@@ -64,9 +110,9 @@ export default function Orders() {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'INR'
     }).format(amount || 0);
   };
 
@@ -164,13 +210,13 @@ export default function Orders() {
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    <div className="text-sm text-gray-900">{order.buyerName || order.buyerId || 'N/A'}</div>
+                    <div className="text-sm text-gray-900">{getBuyerName(order)}</div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    <div className="text-sm text-gray-900">{order.sellerName || order.sellerId || 'N/A'}</div>
+                    <div className="text-sm text-gray-900">{getSellerName(order)}</div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    <div className="text-sm text-gray-900">{order.productName || order.productId || 'N/A'}</div>
+                    <div className="text-sm text-gray-900">{getOrderProductName(order)}</div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <div className="text-sm text-gray-900">{order.quantity || 'N/A'}</div>

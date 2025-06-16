@@ -87,7 +87,7 @@ export const productApi = {
   // Get all products
   getAll: async () => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
         url: '/Product/get-all'
       });
@@ -269,16 +269,15 @@ export const productApi = {
   }
 };
 
-// Order API calls
+// Order API calls - Updated for cookie-based authentication
 export const orderApi = {
   // Place a new order
   place: async (orderData) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'post',
         url: '/Order',
-        data: orderData,
-        ...authConfig()
+        data: orderData
       });
       return response.data;
     } catch (error) {
@@ -290,10 +289,9 @@ export const orderApi = {
   // Get all orders
   getAll: async () => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: '/Order',
-        ...authConfig()
+        url: '/Order'
       });
       return response.data;
     } catch (error) {
@@ -305,10 +303,9 @@ export const orderApi = {
   // Get orders by buyer ID
   getByBuyer: async (buyerId) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: `/Order/buyer/${buyerId}`,
-        ...authConfig()
+        url: `/Order/buyer/${buyerId}`
       });
       return response.data;
     } catch (error) {
@@ -320,10 +317,9 @@ export const orderApi = {
   // Get orders by seller ID
   getBySeller: async (sellerId) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: `/Order/seller/${sellerId}`,
-        ...authConfig()
+        url: `/Order/seller/${sellerId}`
       });
       return response.data;
     } catch (error) {
@@ -335,11 +331,13 @@ export const orderApi = {
   // Update order status
   updateStatus: async (orderId, newStatus) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'put',
         url: `/Order/${orderId}/status`,
         data: JSON.stringify(newStatus),
-        ...authConfig()
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       return response.data;
     } catch (error) {
@@ -351,10 +349,9 @@ export const orderApi = {
   // Delete all orders for a seller
   deleteAllBySeller: async (sellerId) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'delete',
-        url: `/Order/seller/${sellerId}/all`,
-        ...authConfig()
+        url: `/Order/seller/${sellerId}/all`
       });
       return response.data;
     } catch (error) {
@@ -366,10 +363,9 @@ export const orderApi = {
   // Delete all orders
   deleteAll: async () => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'delete',
-        url: '/Order/all',
-        ...authConfig()
+        url: '/Order/all'
       });
       return response.data;
     } catch (error) {
@@ -422,10 +418,9 @@ export const sellerApi = {
   // Get all sellers
   getAll: async () => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: '/Seller/get-all',
-        ...authConfig()
+        url: '/Seller/get-all'
       });
       return response.data;
     } catch (error) {
@@ -519,6 +514,80 @@ export const sellerApi = {
   }
 };
 
+// User API calls (combines buyers and sellers for admin purposes)
+export const userApi = {
+  // Get all users (buyers + sellers combined)
+  getAll: async () => {
+    try {
+      console.log("Fetching all users (buyers + sellers)");
+      
+      // Fetch both buyers and sellers in parallel
+      const [buyersData, sellersData] = await Promise.all([
+        buyerApi.getAll().catch(() => []),
+        sellerApi.getAll().catch(() => [])
+      ]);
+      
+      // Combine and format the data with consistent structure
+      const users = [
+        ...(buyersData || []).map(buyer => ({
+          id: buyer.id,
+          name: buyer.name || buyer.businessName || buyer.username || buyer.email,
+          email: buyer.email,
+          type: 'buyer',
+          originalData: buyer
+        })),
+        ...(sellersData || []).map(seller => ({
+          id: seller.id,
+          name: seller.name || seller.businessName || seller.username || seller.email,
+          email: seller.email,
+          type: 'seller',
+          originalData: seller
+        }))
+      ];
+      
+      console.log(`Combined ${users.length} users from buyers and sellers`);
+      return users;
+    } catch (error) {
+      console.error('Error fetching all users:', error);
+      throw error;
+    }
+  },
+
+  // Get user by ID (searches both buyers and sellers)
+  getById: async (id) => {
+    try {
+      // Try to find in buyers first
+      try {
+        const buyer = await buyerApi.getById(id);
+        return {
+          id: buyer.id,
+          name: buyer.name || buyer.businessName || buyer.username || buyer.email,
+          email: buyer.email,
+          type: 'buyer',
+          originalData: buyer
+        };
+      } catch (buyerError) {
+        // If not found in buyers, try sellers
+        try {
+          const seller = await sellerApi.getById(id);
+          return {
+            id: seller.id,
+            name: seller.name || seller.businessName || seller.username || seller.email,
+            email: seller.email,
+            type: 'seller',
+            originalData: seller
+          };
+        } catch (sellerError) {
+          throw new Error(`User with ID ${id} not found in buyers or sellers`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching user ${id}:`, error);
+      throw error;
+    }
+  }
+};
+
 // Buyer/Retailer API calls
 export const buyerApi = {
   // Register a new buyer
@@ -563,10 +632,9 @@ export const buyerApi = {
   getAll: async () => {
     try {
       console.log("Fetching all buyers");
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: '/Buyer/get-all',
-        ...authConfig()
+        url: '/Buyer/get-all'
       });
       return response.data;
     } catch (error) {
@@ -1025,81 +1093,134 @@ export const reviewApi = {
   }
 };
 
-// Image Store API calls
-export const imageStoreApi = {
-  // Get all images
-  getAll: async () => {
+// Banner API calls for two image arrays (Image1 and Image2)
+export const bannerApi = {
+  // Get all banners
+  getAllBanners: async () => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: '/ImageStore',
-        ...authConfig()
+        url: '/Banner'
       });
-      return response.data;
+      return response;
     } catch (error) {
-      console.error('Error fetching all images:', error);
+      console.error('Error fetching all banners:', error);
       throw error;
     }
   },
 
-  // Get image by ID
-  getById: async (id) => {
+  // Get banner by ID
+  getBannerById: async (id) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'get',
-        url: `/ImageStore/${id}`,
-        ...authConfig()
+        url: `/Banner/${id}`
       });
-      return response.data;
+      return response;
     } catch (error) {
-      console.error(`Error fetching image ${id}:`, error);
+      console.error(`Error fetching banner ${id}:`, error);
       throw error;
     }
   },
 
-  // Add new images
-  create: async (imageData) => {
+  // Create banner with all images (both Image1 and Image2 arrays)
+  createBannerWithAllImages: async (bannerData) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
         method: 'post',
-        url: '/ImageStore',
-        data: imageData,
-        ...authConfig()
+        url: '/Banner/all',
+        data: bannerData
       });
-      return response.data;
+      return response;
     } catch (error) {
-      console.error('Error creating image store:', error);
+      console.error('Error creating banner with all images:', error);
       throw error;
     }
   },
 
-  // Update images
-  update: async (id, imageData) => {
+  // Create banner with single image array
+  createBannerWithSingleImage: async (bannerData) => {
     try {
-      const response = await tryBothApproaches({
+      const response = await tryBothApproachesWithCookies({
+        method: 'post',
+        url: '/Banner/single',
+        data: bannerData
+      });
+      return response;
+    } catch (error) {
+      console.error('Error creating banner with single image array:', error);
+      throw error;
+    }
+  },
+
+  // Update entire image array (Image1 or Image2)
+  updateImageArray: async (bannerId, imageField, imageData) => {
+    try {
+      const response = await tryBothApproachesWithCookies({
         method: 'put',
-        url: `/ImageStore/${id}`,
-        data: imageData,
-        ...authConfig()
+        url: `/Banner/${bannerId}/images/${imageField}`,
+        data: imageData
       });
-      return response.data;
+      return response;
     } catch (error) {
-      console.error(`Error updating image store ${id}:`, error);
+      console.error(`Error updating ${imageField} array in banner ${bannerId}:`, error);
       throw error;
     }
   },
 
-  // Delete images
-  delete: async (id) => {
+  // Add images to existing image array
+  addImagesToArray: async (bannerId, imageField, imageData) => {
     try {
-      const response = await tryBothApproaches({
-        method: 'delete',
-        url: `/ImageStore/${id}`,
-        ...authConfig()
+      const response = await tryBothApproachesWithCookies({
+        method: 'post',
+        url: `/Banner/${bannerId}/add-images/${imageField}`,
+        data: imageData
       });
-      return response.data;
+      return response;
     } catch (error) {
-      console.error(`Error deleting image store ${id}:`, error);
+      console.error(`Error adding images to ${imageField} array in banner ${bannerId}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete specific image from array
+  deleteImageFromArray: async (bannerId, imageField, imageIndex) => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'delete',
+        url: `/Banner/${bannerId}/images/${imageField}/${imageIndex}`
+      });
+      return response;
+    } catch (error) {
+      console.error(`Error deleting image ${imageIndex} from ${imageField} array in banner ${bannerId}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete entire banner
+  deleteBanner: async (bannerId) => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'delete',
+        url: `/Banner/${bannerId}`
+      });
+      return response;
+    } catch (error) {
+      console.error(`Error deleting banner ${bannerId}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete all banners
+  deleteAllBanners: async () => {
+    try {
+      const response = await tryBothApproachesWithCookies({
+        method: 'delete',
+        url: '/Banner/all'
+      });
+      return response;
+    } catch (error) {
+      console.error('Error deleting all banners:', error);
       throw error;
     }
   }
@@ -1664,12 +1785,13 @@ const api = {
   order: orderApi,
   seller: sellerApi,
   buyer: buyerApi,
+  user: userApi,  // Combined buyers and sellers
   category: categoryApi,
   subCategory: subCategoryApi,
   cart: cartApi,
   wishlist: wishlistApi,
   review: reviewApi,
-  imageStore: imageStoreApi,
+  banner: bannerApi,
   askAdmin: askAdminApi,
   admin: adminApi,
   subAdmin: subAdminApi,

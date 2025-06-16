@@ -22,7 +22,7 @@ namespace Backend.Data
         public DbSet<SubAdmin> SubAdmins { get; set; }
         public DbSet<Role> CustomRoles { get; set; }
         public DbSet<ReviewRating> ReviewRatings { get; set; }
-        public DbSet<ImageStore> ImageStores { get; set; }
+        public DbSet<Banner> Banners { get; set; }
 
         // New entities for password reset
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
@@ -60,9 +60,33 @@ namespace Backend.Data
                     c => c.ToList()
                 ));
 
-            // Configure ImageStore entity
-            modelBuilder.Entity<ImageStore>()
-                .Property(i => i.CreatedAt)
+            // Configure Banner entity
+            modelBuilder.Entity<Banner>()
+                .Property(b => b.Image1)
+                .HasConversion(
+                    v => string.Join(";", v),
+                    v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
+                )
+                .Metadata.SetValueComparer(new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
+                    (c1, c2) => c1!.SequenceEqual(c2!),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()
+                ));
+
+            modelBuilder.Entity<Banner>()
+                .Property(b => b.Image2)
+                .HasConversion(
+                    v => string.Join(";", v),
+                    v => v.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList()
+                )
+                .Metadata.SetValueComparer(new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
+                    (c1, c2) => c1!.SequenceEqual(c2!),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()
+                ));
+
+            modelBuilder.Entity<Banner>()
+                .Property(b => b.CreatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
 
             // Configure PasswordResetToken index

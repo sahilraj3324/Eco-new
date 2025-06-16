@@ -1,20 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Backend.Models
 {
-    public class ImageStore
+    public class Banner
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        [Required]
-        public string Image1 { get; set; }
+        public List<string> Image1 { get; set; } = new List<string>();
 
-        [Required]
-        public string Image2 { get; set; }
-
-        public string Description { get; set; }
+        public List<string> Image2 { get; set; } = new List<string>();
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

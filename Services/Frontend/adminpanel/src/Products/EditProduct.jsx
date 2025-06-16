@@ -724,22 +724,7 @@ export default function EditProduct() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
-                  name="status"
-                  value={product.status}
-                  onChange={handleInputChange}
-                  className="p-3 rounded-lg bg-gray-100 w-full border border-gray-200"
-                >
-                  <option value="">Select Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="In Review">In Review</option>
-                  <option value="Draft">Draft</option>
-                  <option value="Discontinued">Discontinued</option>
-                </select>
-              </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Price *</label>

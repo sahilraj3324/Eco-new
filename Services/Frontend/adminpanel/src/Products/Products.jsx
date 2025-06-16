@@ -11,6 +11,10 @@ export default function Products() {
   const [sortDirection, setSortDirection] = useState('asc')
   const [viewMode, setViewMode] = useState('table') // 'table' or 'card'
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  
   // Check screen size on mount and resize
   useEffect(() => {
     const checkScreenSize = () => {
@@ -93,6 +97,29 @@ export default function Products() {
     return sortDirection === 'asc' ? comparison : -comparison
   })
 
+  // Get paginated data
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentItems = sortedProducts.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage)
+
+  // Change page
+  const paginate = (pageNumber) => setCurrentPage(pageNumber)
+  
+  // Go to next page
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+  
+  // Go to previous page
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
   const getSortIcon = (field) => {
     if (sortBy !== field) return null
     
@@ -121,7 +148,7 @@ export default function Products() {
 
   // Card view for mobile
   const renderProductCards = () => {
-    if (sortedProducts.length === 0) {
+    if (currentItems.length === 0) {
       return (
         <div className="mt-4 rounded-md bg-white p-4 text-center text-gray-500">
           No products found
@@ -131,7 +158,7 @@ export default function Products() {
 
     return (
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {sortedProducts.map((product) => (
+        {currentItems.map((product) => (
           <div key={product.id} className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow">
             <div className="p-4">
               <div className="flex items-center">
@@ -250,8 +277,8 @@ export default function Products() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {sortedProducts.length > 0 ? (
-                sortedProducts.map((product) => (
+              {currentItems.length > 0 ? (
+                currentItems.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center">
@@ -277,7 +304,7 @@ export default function Products() {
                       <div className="text-xs text-gray-500">{product.material || ''}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <div className="text-sm text-gray-900">${parseFloat(product.price || 0).toFixed(2)}</div>
+                      <div className="text-sm text-gray-900">₹{parseFloat(product.price || 0).toFixed(2)}</div>
                       <div className="text-xs text-gray-500">GST: {product.gst || 'N/A'}</div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
@@ -317,6 +344,118 @@ export default function Products() {
     )
   }
 
+  // Pagination component
+  const renderPagination = () => {
+    if (sortedProducts.length <= itemsPerPage) return null;
+    
+    return (
+      <div className="mt-4 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={prevPage}
+            disabled={currentPage === 1}
+            className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 ${
+              currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+            }`}
+          >
+            Previous
+          </button>
+          <button
+            onClick={nextPage}
+            disabled={currentPage === totalPages}
+            className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 ${
+              currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
+              <span className="font-medium">
+                {indexOfLastItem > sortedProducts.length ? sortedProducts.length : indexOfLastItem}
+              </span>{' '}
+              of <span className="font-medium">{sortedProducts.length}</span> results
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              <button
+                onClick={prevPage}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ${
+                  currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                }`}
+              >
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {/* Page numbers */}
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                // Show limited page numbers
+                if (
+                  pageNumber === 1 ||
+                  pageNumber === totalPages ||
+                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => paginate(pageNumber)}
+                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                        currentPage === pageNumber
+                          ? 'z-10 bg-cyan-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                }
+                
+                // Show ellipsis
+                if (
+                  (pageNumber === 2 && currentPage > 3) ||
+                  (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
+                ) {
+                  return (
+                    <span
+                      key={pageNumber}
+                      className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+                
+                return null;
+              })}
+              
+              <button
+                onClick={nextPage}
+                disabled={currentPage === totalPages}
+                className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ${
+                  currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                }`}
+              >
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -335,6 +474,21 @@ export default function Products() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </div>
+          </div>
+          <div className="flex items-center">
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1); // Reset to first page when changing items per page
+              }}
+              className="rounded-md border border-gray-300 px-3 py-2 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            >
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
           </div>
           {/* <Link 
             to="/products/add"
@@ -366,9 +520,15 @@ export default function Products() {
           <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-cyan-500"></div>
         </div>
       ) : viewMode === 'table' ? (
-        renderProductTable()
+        <>
+          {renderProductTable()}
+          {renderPagination()}
+        </>
       ) : (
-        renderProductCards()
+        <>
+          {renderProductCards()}
+          {renderPagination()}
+        </>
       )}
     </div>
   )

@@ -70,6 +70,8 @@ export default function ViewProduct() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   // Function to handle product deletion
   const handleDeleteProduct = async () => {
@@ -82,6 +84,33 @@ export default function ViewProduct() {
         setError(err.message || 'Failed to delete product');
         // Optionally, display this error more prominently on the page
       }
+    }
+  };
+
+  // Function to handle status update
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      setUpdatingStatus(true);
+      setError(null);
+      
+      // Create updated product data
+      const updatedProduct = {
+        ...product,
+        status: newStatus
+      };
+      
+      await api.product.update(id, updatedProduct);
+      
+      // Update local state
+      setProduct(prev => ({ ...prev, status: newStatus }));
+      setStatusMessage(`✅ Product status updated to ${newStatus}`);
+      
+      // Clear message after 3 seconds
+      setTimeout(() => setStatusMessage(''), 3000);
+    } catch (err) {
+      setError(`Failed to update status: ${err.message || 'Unknown error'}`);
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -197,54 +226,109 @@ export default function ViewProduct() {
 
         {/* Product Details */}
         <div className="p-4 md:p-6">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">{product.name || 'N/A'}</h1>
-          <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold leading-5 ${product.status === 'Active' || product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-            Status: {product.status || 'N/A'}
-          </span>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2 md:mb-0">{product.name || 'N/A'}</h1>
+            
+            {/* Status Toggle */}
+            <div className="flex items-center space-x-3">
+              <span className="text-sm font-medium text-gray-700">Status:</span>
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => handleStatusUpdate('In Review')}
+                  disabled={updatingStatus}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                    product.status === 'In Review' 
+                      ? 'bg-yellow-500 text-white shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+                  } ${updatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {updatingStatus && product.status !== 'In Review' ? (
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                  ) : (
+                    'In Review'
+                  )}
+                </button>
+                <button
+                  onClick={() => handleStatusUpdate('Active')}
+                  disabled={updatingStatus}
+                  className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                    product.status === 'Active' 
+                      ? 'bg-green-500 text-white shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
+                  } ${updatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {updatingStatus && product.status !== 'Active' ? (
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                  ) : (
+                    'Active'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Status and Error Messages */}
+          {statusMessage && (
+            <div className="mb-4 p-3 rounded-lg bg-green-100 text-green-800 border border-green-300">
+              {statusMessage}
+            </div>
+          )}
+          
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-800 border border-red-300">
+              {error}
+            </div>
+          )}
 
           <p className="text-gray-600 mt-4 text-md leading-relaxed">{product.description || 'No description available.'}</p>
 
           <div className="mt-6 border-t pt-6">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">Product Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm text-gray-600">
-              <div><strong className="font-medium text-gray-800">Price:</strong> ${parseFloat(product.price || 0).toFixed(2)}</div>
+              <div><strong className="font-medium text-gray-800">Price:</strong> ₹{parseFloat(product.price || 0).toFixed(2)}</div>
               <div><strong className="font-medium text-gray-800">Stock:</strong> {product.stock || 0} units</div>
               <div><strong className="font-medium text-gray-800">Category:</strong> {product.category || 'N/A'}</div>
               <div><strong className="font-medium text-gray-800">Subcategory:</strong> {product.subcategory || 'N/A'}</div>
               <div><strong className="font-medium text-gray-800">Brand:</strong> {product.brand || 'N/A'}</div>
-              <div><strong className="font-medium text-gray-800">Seller ID:</strong> {product.sellerId || 'N/A'}</div>
-              <div><strong className="font-medium text-gray-800">SKU:</strong> {product.sku || 'N/A'}</div>
               <div><strong className="font-medium text-gray-800">Material:</strong> {product.material || 'N/A'}</div>
-              <div><strong className="font-medium text-gray-800">Color:</strong> {product.color || 'N/A'}</div>
-              <div><strong className="font-medium text-gray-800">Size:</strong> {product.size || 'N/A'}</div>
-              <div><strong className="font-medium text-gray-800">Weight:</strong> {product.weight ? `${product.weight} kg` : 'N/A'}</div>
-              <div><strong className="font-medium text-gray-800">Dimensions:</strong> {product.dimensions || 'N/A'}</div>
-              <div><strong className="font-medium text-gray-800">GST:</strong> {product.gst ? `${product.gst}%` : 'N/A'}</div>
+              {/* <div><strong className="font-medium text-gray-800">Seller ID:</strong> {product.sellerId || 'N/A'}</div> */}
+              <div><strong className="font-medium text-gray-800">GST:</strong> {product.gst ? `${product.gst}` : 'N/A'}</div>
+              <div><strong className="font-medium text-gray-800">HSN:</strong> {product.hsn1 || 'N/A'}</div>
               <div><strong className="font-medium text-gray-800">MOQ:</strong> {product.moq || 'N/A'}</div>
-              {product.tags && product.tags.length > 0 && (
-                <div className="md:col-span-2"><strong className="font-medium text-gray-800">Tags:</strong> {product.tags.join(', ')}</div>
-              )}
-              {product.features && product.features.length > 0 && (
-                 <div className="md:col-span-2">
-                    <strong className="font-medium text-gray-800">Features:</strong>
-                    <ul className="list-disc list-inside ml-4 mt-1">
-                        {product.features.map((feature, index) => <li key={index}>{feature}</li>)}
-                    </ul>
+              <div><strong className="font-medium text-gray-800">Pieces/Pack:</strong> {product.piecesPerPack || 'N/A'}</div>
+              <div><strong className="font-medium text-gray-800">Ships In:</strong> {product.shipsIn || 'N/A'}</div>
+              <div><strong className="font-medium text-gray-800">Created At:</strong> {new Date(product.createdAt).toLocaleDateString()}</div>
+              
+              {/* Variants */}
+              {product.variants?.length > 0 && (
+                <div className="md:col-span-2">
+                  <strong className="font-medium text-gray-800">Variants:</strong>
+                  <div className="mt-2 overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {product.variants.map((variant, index) => (
+                          <tr key={index}>
+                            <td className="px-4 py-2 whitespace-nowrap">{variant.size || 'N/A'}</td>
+                            <td className="px-4 py-2 whitespace-nowrap">{variant.color || 'N/A'}</td>
+                            <td className="px-4 py-2 whitespace-nowrap">₹{variant.price?.toFixed(2) || 'N/A'}</td>
+                            <td className="px-4 py-2 whitespace-nowrap">{variant.stock || 'N/A'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
           </div>
-
-          {product.specifications && Object.keys(product.specifications).length > 0 && (
-            <div className="mt-6 border-t pt-6">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">Specifications</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-600">
-                {Object.entries(product.specifications).map(([key, value]) => (
-                  <div key={key}><strong className="font-medium text-gray-800 capitalize">{key.replace(/([A-Z])/g, ' $1')}:</strong> {String(value)}</div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         
         <div className="p-4 md:p-6 border-t flex justify-end space-x-3">

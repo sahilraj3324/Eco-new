@@ -85,7 +85,7 @@ namespace Backend.Controllers
                 .Include(o => o.Product)
                 .ToListAsync();
 
-            // Enrich orders with variant details
+            // Enrich orders with variant details and calculate total amount
             var enrichedOrders = orders.Select(order => new
             {
                 order.Id,
@@ -94,11 +94,13 @@ namespace Backend.Controllers
                 order.VariantId,
                 order.Quantity,
                 order.UnitPrice,
+                TotalAmount = order.UnitPrice * order.Quantity, // Calculate total amount
                 order.SellerId,
                 order.Status,
                 order.OrderDate,
                 order.ProcessedAt,
                 order.ShippingAddress,
+                ProductName = order.Product?.Name, // Include product name
                 Product = order.Product,
                 Variant = GetVariantDetails(order.Product, order.VariantId)
             }).ToList();
@@ -115,7 +117,7 @@ namespace Backend.Controllers
                 .Include(o => o.Product)
                 .ToListAsync();
 
-            // Enrich orders with variant details
+            // Enrich orders with variant details and calculate total amount
             var enrichedOrders = orders.Select(order => new
             {
                 order.Id,
@@ -124,11 +126,13 @@ namespace Backend.Controllers
                 order.VariantId,
                 order.Quantity,
                 order.UnitPrice,
+                TotalAmount = order.UnitPrice * order.Quantity, // Calculate total amount
                 order.SellerId,
                 order.Status,
                 order.OrderDate,
                 order.ProcessedAt,
                 order.ShippingAddress,
+                ProductName = order.Product?.Name, // Include product name
                 Product = order.Product,
                 Variant = GetVariantDetails(order.Product, order.VariantId)
             }).ToList();
@@ -145,7 +149,7 @@ namespace Backend.Controllers
                 .Include(o => o.Product)
                 .ToListAsync();
 
-            // Enrich orders with variant details
+            // Enrich orders with variant details and calculate total amount
             var enrichedOrders = orders.Select(order => new
             {
                 order.Id,
@@ -154,11 +158,13 @@ namespace Backend.Controllers
                 order.VariantId,
                 order.Quantity,
                 order.UnitPrice,
+                TotalAmount = order.UnitPrice * order.Quantity, // Calculate total amount
                 order.SellerId,
                 order.Status,
                 order.OrderDate,
                 order.ProcessedAt,
                 order.ShippingAddress,
+                ProductName = order.Product?.Name, // Include product name
                 Product = order.Product,
                 Variant = GetVariantDetails(order.Product, order.VariantId)
             }).ToList();

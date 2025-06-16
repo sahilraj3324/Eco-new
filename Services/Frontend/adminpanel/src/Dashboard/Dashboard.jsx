@@ -13,7 +13,6 @@ export default function Dashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [recentOrders, setRecentOrders] = useState([])
-  const [topProducts, setTopProducts] = useState([])
   const [recentActivity, setRecentActivity] = useState([])
   const [revenueSummary, setRevenueSummary] = useState({
     total: 0,
@@ -36,9 +35,10 @@ export default function Dashboard() {
         api.buyer.getAll(),
         api.product.getAll(),
         api.category.getAll(),
+        api.order.getAll(), // Add orders to the initial fetch
       ]
 
-      const [sellers, buyers, products, categories] = await Promise.all(promises)
+      const [sellers, buyers, products, categories, orders] = await Promise.all(promises)
       
       // Process sellers data
       const sellersList = Array.isArray(sellers) ? sellers : (sellers?.value || [])
@@ -52,25 +52,29 @@ export default function Dashboard() {
       // Process categories data
       const categoriesList = Array.isArray(categories) ? categories : (categories?.value || [])
       
+      // Process orders data
+      const ordersList = Array.isArray(orders) ? orders : (orders?.value || [])
+      
       // Set statistics
       setStats({
         vendors: sellersList.length,
         products: productsList.length,
         retailers: buyersList.length,
-        orders: productsList.length
+        orders: ordersList.length
       })
       
-      // Calculate revenue metrics
-      calculateRevenueMetrics(productsList)
+      // Calculate revenue metrics using orders data
+      calculateRevenueMetrics(ordersList)
       
       // Set recent orders (latest 5)
-      fetchRecentOrders()
-      
-      // Find top selling products
-      findTopSellingProducts(productsList)
+      setRecentOrders(
+        ordersList
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5)
+      )
       
       // Generate recent activity
-      generateRecentActivity(sellersList, productsList, buyersList, productsList)
+      generateRecentActivity(sellersList, productsList, buyersList, ordersList)
     } catch (error) {
       setStats({
         vendors: 0,
@@ -83,22 +87,7 @@ export default function Dashboard() {
     }
   }
 
-  const fetchRecentOrders = async () => {
-    try {
-      const orders = await api.order.getAll()
-      
-      // Sort by creation date and take the 5 most recent
-      const sortedOrders = orders
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 5)
-      
-      setRecentOrders(sortedOrders)
-    } catch (error) {
-      setRecentOrders([])
-    }
-  }
-
-  // Calculate revenue metrics from orders
+  // Calculate revenue metrics from orders with unit prices
   const calculateRevenueMetrics = (orders) => {
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -112,8 +101,13 @@ export default function Dashboard() {
     let monthlyRevenue = 0
     
     orders.forEach(order => {
-      const orderAmount = order.totalAmount || 0
       const orderDate = new Date(order.createdAt || order.date || 0)
+      
+      // Calculate order amount from items with unit prices
+      const orderAmount = (order.items || []).reduce((sum, item) => {
+        const itemTotal = (item.unitPrice || 0) * (item.quantity || 1)
+        return sum + itemTotal
+      }, 0)
       
       // Add to total revenue
       totalRevenue += orderAmount
@@ -140,36 +134,6 @@ export default function Dashboard() {
       weekly: weeklyRevenue,
       monthly: monthlyRevenue
     })
-  }
-  
-  // Find top selling products
-  const findTopSellingProducts = (products) => {
-    // Count occurrences of each product in orders
-    const productCounts = {}
-    
-    products.forEach(product => {
-      const items = product.items || []
-      items.forEach(item => {
-        const productId = item.productId
-        if (productId) {
-          productCounts[productId] = (productCounts[productId] || 0) + (item.quantity || 1)
-        }
-      })
-    })
-    
-    // Convert to array and sort by count
-    const sortedProducts = Object.keys(productCounts)
-      .map(id => {
-        const product = products.find(p => p.id === id) || { id }
-        return {
-          ...product,
-          soldCount: productCounts[id]
-        }
-      })
-      .sort((a, b) => b.soldCount - a.soldCount)
-      .slice(0, 5)
-    
-    setTopProducts(sortedProducts)
   }
   
   // Generate recent activity
@@ -345,8 +309,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Orders and Top Products */}
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Recent Orders */}
+        <div className="mt-8">
           <div className="rounded-lg bg-white p-6 shadow-md">
             <div className="mb-4 flex justify-between">
               <h2 className="text-lg font-medium text-gray-800">Recent Orders</h2>
@@ -362,81 +326,41 @@ export default function Dashboard() {
             ) : (
               <div className="divide-y divide-gray-200">
                 {recentOrders.length > 0 ? (
-                  recentOrders.map((order) => (
-                    <div key={order.id} className="py-3">
-                      <div className="flex justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">Order #{order.id?.substring(0, 8) || 'N/A'}</p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(order.createdAt || order.date || 0).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">
-                            {formatCurrency(order.totalAmount || 0)}
-                          </p>
-                          <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${
-                            order.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            order.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
-                            order.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {order.status || 'Pending'}
-                          </span>
+                  recentOrders.map((order) => {
+                    // Calculate order total from items with unit prices
+                    const orderTotal = (order.items || []).reduce((sum, item) => {
+                      const itemTotal = (item.unitPrice || 0) * (item.quantity || 1)
+                      return sum + itemTotal
+                    }, 0)
+
+                    return (
+                      <div key={order.id} className="py-3">
+                        <div className="flex justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Order #{order.id?.substring(0, 8) || 'N/A'}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(order.createdAt || order.date || 0).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatCurrency(orderTotal)}
+                            </p>
+                            <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${
+                              order.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                              order.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
+                              order.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {order.status || 'Pending'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 ) : (
                   <p className="py-4 text-center text-sm text-gray-500">No recent orders</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-lg bg-white p-6 shadow-md">
-            <div className="mb-4 flex justify-between">
-              <h2 className="text-lg font-medium text-gray-800">Top Selling Products</h2>
-              <Link to="/products" className="text-sm font-medium text-cyan-600 hover:text-cyan-800">
-                View All →
-              </Link>
-            </div>
-            
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-cyan-500"></div>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {topProducts.length > 0 ? (
-                  topProducts.map((product) => (
-                    <div key={product.id} className="flex items-center py-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-md bg-gray-200">
-                        <img
-                          src={product.mainImage || (product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : 'https://placehold.co/100x100/EEFCFF/00B1CC?text=Product')}
-                          alt={product.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="ml-4 flex-1">
-                        <p className="text-sm font-medium text-gray-700">{product.name || 'Unknown Product'}</p>
-                        <p className="text-xs text-gray-500">
-                          {product.category || 'Uncategorized'} • 
-                          {product.stock !== undefined ? ` Stock: ${product.stock}` : ''}
-                        </p>
-                      </div>
-                      <div className="ml-2 text-right">
-                        <p className="text-sm font-medium text-gray-900">
-                          {formatCurrency(product.price || 0)}
-                        </p>
-                        <p className="text-xs text-green-600">
-                          {product.soldCount} sold
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="py-4 text-center text-sm text-gray-500">No product data available</p>
                 )}
               </div>
             )}

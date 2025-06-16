@@ -10,6 +10,11 @@ export default function VendorDetails() {
   const [error, setError] = useState(null)
   const [productsError, setProductsError] = useState(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  
+  // Pagination states for products
+  const [currentPage, setCurrentPage] = useState(1)
+  const [productsPerPage, setProductsPerPage] = useState(6)
+  
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -58,6 +63,141 @@ export default function VendorDetails() {
       setUpdatingStatus(false)
     }
   }
+
+  // Get paginated products
+  const indexOfLastProduct = currentPage * productsPerPage
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage
+  const currentProducts = products.slice(indexOfFirstProduct, indexOfLastProduct)
+  const totalPages = Math.ceil(products.length / productsPerPage)
+
+  // Change page
+  const paginate = (pageNumber) => setCurrentPage(pageNumber)
+  
+  // Go to next page
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+  
+  // Go to previous page
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  // Pagination component for products
+  const renderPagination = () => {
+    if (products.length <= productsPerPage) return null;
+    
+    return (
+      <div className="mt-4 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={prevPage}
+            disabled={currentPage === 1}
+            className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 ${
+              currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+            }`}
+          >
+            Previous
+          </button>
+          <button
+            onClick={nextPage}
+            disabled={currentPage === totalPages}
+            className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 ${
+              currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{indexOfFirstProduct + 1}</span> to{' '}
+              <span className="font-medium">
+                {indexOfLastProduct > products.length ? products.length : indexOfLastProduct}
+              </span>{' '}
+              of <span className="font-medium">{products.length}</span> products
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              <button
+                onClick={prevPage}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ${
+                  currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                }`}
+              >
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {/* Page numbers */}
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                // Show limited page numbers
+                if (
+                  pageNumber === 1 ||
+                  pageNumber === totalPages ||
+                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => paginate(pageNumber)}
+                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                        currentPage === pageNumber
+                          ? 'z-10 bg-cyan-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                }
+                
+                // Show ellipsis
+                if (
+                  (pageNumber === 2 && currentPage > 3) ||
+                  (pageNumber === totalPages - 1 && currentPage < totalPages - 2)
+                ) {
+                  return (
+                    <span
+                      key={pageNumber}
+                      className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+                
+                return null;
+              })}
+              
+              <button
+                onClick={nextPage}
+                disabled={currentPage === totalPages}
+                className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ${
+                  currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                }`}
+              >
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const getStatusBadge = (status) => {
     if (!status) return null
@@ -248,15 +388,29 @@ export default function VendorDetails() {
       <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
         <div className="p-6 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-800">Vendor Products</h2>
-          <button
-            onClick={() => navigate(`/vendors/${id}/add-product`)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="-ml-1 mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add Product
-          </button>
+          <div className="flex items-center space-x-4">
+            <select
+              value={productsPerPage}
+              onChange={(e) => {
+                setProductsPerPage(Number(e.target.value));
+                setCurrentPage(1); // Reset to first page when changing items per page
+              }}
+              className="rounded-md border border-gray-300 px-3 py-1 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            >
+              <option value={6}>6 per page</option>
+              <option value={12}>12 per page</option>
+              <option value={24}>24 per page</option>
+            </select>
+            <button
+              onClick={() => navigate(`/vendors/${id}/add-product`)}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="-ml-1 mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add Product
+            </button>
+          </div>
         </div>
 
         {productsError && (
@@ -283,42 +437,45 @@ export default function VendorDetails() {
             No products found for this vendor. Click "Add Product" to add one.
           </div>
         ) : (
-          <div className="px-4 sm:px-6 lg:px-8 py-4">
-            <div className="mt-2 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((product) => (
-                <div key={product.id} className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        {product.mainImage ? (
-                          <img className="h-12 w-12 rounded-md object-cover" src={product.mainImage} alt={product.name} />
-                        ) : (
-                          <div className="h-12 w-12 rounded-md bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-500 text-xs">No img</span>
+          <div>
+            <div className="px-4 sm:px-6 lg:px-8 py-4">
+              <div className="mt-2 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {currentProducts.map((product) => (
+                  <div key={product.id} className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          {product.mainImage ? (
+                            <img className="h-12 w-12 rounded-md object-cover" src={product.mainImage} alt={product.name} />
+                          ) : (
+                            <div className="h-12 w-12 rounded-md bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-500 text-xs">No img</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-5">
+                          <h3 className="text-lg leading-6 font-medium text-gray-900">{product.name}</h3>
+                          <div className="mt-1 flex items-center">
+                            <span className="text-sm font-medium text-green-600">₹{product.price}</span>
+                            <span className="mx-2 text-gray-500">•</span>
+                            <span className="text-sm text-gray-500">Stock: {product.stock}</span>
                           </div>
-                        )}
-                      </div>
-                      <div className="ml-5">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900">{product.name}</h3>
-                        <div className="mt-1 flex items-center">
-                          <span className="text-sm font-medium text-green-600">₹{product.price}</span>
-                          <span className="mx-2 text-gray-500">•</span>
-                          <span className="text-sm text-gray-500">Stock: {product.stock}</span>
                         </div>
                       </div>
                     </div>
+                    <div className="bg-gray-50 px-5 py-3 flex justify-end">
+                      <button
+                        onClick={() => navigate(`/products/${product.id}`)}
+                        className="text-sm font-medium text-cyan-600 hover:text-cyan-800"
+                      >
+                        View Details
+                      </button>
+                    </div>
                   </div>
-                  <div className="bg-gray-50 px-5 py-3 flex justify-end">
-                    <button
-                      onClick={() => navigate(`/products/${product.id}`)}
-                      className="text-sm font-medium text-cyan-600 hover:text-cyan-800"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+            {renderPagination()}
           </div>
         )}
       </div>
