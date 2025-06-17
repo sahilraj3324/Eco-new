@@ -40,6 +40,10 @@ namespace Backend.Data
                 .Property(o => o.UnitPrice)
                 .HasPrecision(18, 2);
 
+            modelBuilder.Entity<Order>()
+                .Property(o => o.TotalAmount)
+                .HasPrecision(18, 2);
+
             // Configure SubAdmin Roles list conversion - commented out since Roles is now string
             // modelBuilder.Entity<SubAdmin>()
             //     .Property(s => s.Roles)

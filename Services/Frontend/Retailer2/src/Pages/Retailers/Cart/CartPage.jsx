@@ -101,11 +101,24 @@ const CartPage = () => {
   };
 
   const handleCheckout = (item) => {
-    navigate('/order', { state: { item } });
+    navigate('/order', { state: { 
+      item: {
+        ...item,
+        cartItemId: item.id // Pass cart item ID for deletion
+      }
+    } });
   };
 
   const handleSellerCheckout = (sellerItems) => {
-    navigate('/order', { state: { items: sellerItems, isBulkOrder: true } });
+    navigate('/order', { state: { 
+      items: sellerItems.map(item => ({
+        ...item,
+        cartItemId: item.id // Pass cart item ID for deletion
+      })), 
+      isBulkOrder: true,
+      cartItemIds: sellerItems.map(item => item.id), // Pass all cart item IDs for bulk deletion
+      isFullCartCheckout: false // This is seller-specific, not full cart
+    } });
   };
 
   // Group items by seller

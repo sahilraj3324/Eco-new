@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, CheckCircle2, Package, CreditCard, MapPin, Star, Shield, Truck, Heart } from 'lucide-react';
+import CashfreePayment from '../../components/CashfreePayment';
 
 const getVariantForOrderItem = (item) => {
   if (!item.product || !item.variantId) return null;
@@ -47,6 +48,8 @@ const OrderPage = () => {
   }
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentOrderData, setCurrentOrderData] = useState(null);
   const address = localStorage.getItem('address') || 'dummy-user-123';
 
   // Calculate totals for all items
@@ -96,6 +99,25 @@ const OrderPage = () => {
       return;
     }
 
+    // Instead of processing directly, open payment modal for single items
+    if (!isBulkOrder && orderItems.length === 1) {
+      const currentItem = orderItems[0];
+      const variant = getVariantForOrderItem(currentItem);
+      
+      setCurrentOrderData({
+        productId: currentItem.product.id,
+        variantId: currentItem.variantId,
+        quantity: currentItem.quantity,
+        unitPrice: variant?.price || variant?.Price || currentItem.product?.price || 0,
+        productName: currentItem.product.name,
+        shippingAddress: address
+      });
+      
+      setShowPaymentModal(true);
+      return;
+    }
+
+    // For bulk orders, continue with original logic
     setIsProcessing(true);
     
     try {
@@ -563,6 +585,13 @@ const OrderPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Cashfree Payment Modal */}
+      <CashfreePayment
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        orderData={currentOrderData}
+      />
     </div>
   );
 };

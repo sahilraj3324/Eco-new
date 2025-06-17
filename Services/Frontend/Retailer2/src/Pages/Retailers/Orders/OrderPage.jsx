@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, CheckCircle2, Package, CreditCard, MapPin, Star, Shield, Truck, Heart } from 'lucide-react';
 import { useAuthContext } from '../../../contexts/AuthContext';
+import CashfreePayment from '../../../components/CashfreePayment';
+import { api } from '../../../api';
 
 const getVariantForOrderItem = (item) => {
   if (!item.product || !item.variantId) return null;
@@ -20,6 +22,8 @@ const OrderPage = () => {
   const items = location.state?.items;
   const isBulkOrder = location.state?.isBulkOrder;
   const allSellers = location.state?.allSellers;
+  const cartItemIds = location.state?.cartItemIds;
+  const isFullCartCheckout = location.state?.isFullCartCheckout;
 
   // Determine what we're working with
   const orderItems = isBulkOrder ? items : (item ? [item] : []);
@@ -50,6 +54,8 @@ const OrderPage = () => {
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentOrderData, setPaymentOrderData] = useState(null);
   const address = localStorage.getItem('address') || 'dummy-user-123'
 
   // Calculate totals for all items
@@ -99,80 +105,89 @@ const OrderPage = () => {
       return;
     }
 
-    setIsProcessing(true);
+    // Debug logging
+    console.log('Order details:', {
+      isBulkOrder,
+      orderItemsLength: orderItems.length,
+      orderItems,
+      locationState: location.state
+    });
+
+    // Production logic: Use Cashfree payment gateway for all orders
+    console.log('Using Cashfree payment gateway for order processing');
     
-    try {
-      const orderPromises = orderItems.map(async (currentItem) => {
-        const variant = getVariantForOrderItem(currentItem);
-        const price = (variant?.price || variant?.Price || currentItem.product?.price || 0);
-        
-        const order = {
-          buyerId: auth.user.id,
-          productId: currentItem.product.id,
-          product: currentItem.product,
-          variantId: currentItem.variantId,
-          variant: variant,
-          quantity: currentItem.quantity,
-          unitPrice: price,
-          sellerId: currentItem.product.sellerId || currentItem.product.userId,
-          status: 'Pending',
-          orderDate: new Date().toISOString(),
-          processedAt: null,
-          shippingAddress: address,
-          isBulkOrder: isBulkOrder,
-          orderType: isBulkOrder ? (allSellers ? 'multi-seller' : 'single-seller') : 'single-item'
-        };
-
-        const response = await fetch('/api/order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(order),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to place order for ${currentItem.product.name}`);
-        }
-
-        return await response.json();
-      });
-
-      const orderResults = await Promise.all(orderPromises);
-
-      // Prepare order items for stock deduction
-      const orderItemsForStock = orderItems.map(currentItem => {
-        const variant = getVariantForOrderItem(currentItem);
-        return {
-          productId: currentItem.product.id,
-          variantId: currentItem.variantId,
-          quantity: currentItem.quantity,
-          productName: currentItem.product.name,
-          variantColor: variant?.color || variant?.Color,
-          variantSize: variant?.size || variant?.Size
-        };
-      });
-
-      // Navigate to success page with bulk order info
-      navigate('/ordersuccess', { 
-        state: { 
-          orderIds: orderResults.map(r => r.id),
-          isBulkOrder: isBulkOrder,
-          totalItems: orderItems.length,
-          totalAmount: totalAmount,
-          sellers: sellers.length,
-          orderItemsForStock: orderItemsForStock,
-          cartItemIds: orderItems.map(item => item.id),
-          isFullCartCheckout: allSellers
-        } 
-      });
-
-    } catch (error) {
-      console.error('Error placing order:', error);
-      alert(`Failed to place order. Please try again! Error: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
+    if (orderItems.length === 1) {
+      // Single item order - use Cashfree payment modal
+      console.log('Processing single item order via Cashfree');
+      const currentItem = orderItems[0];
+      const variant = getVariantForOrderItem(currentItem);
+      const price = (variant?.price || variant?.Price || currentItem.product?.price || 0);
+      
+      // Prepare order data for payment
+      const orderData = {
+        buyerId: auth.user.id,
+        productId: currentItem.product.id,
+        productName: currentItem.product.name,
+        variantId: currentItem.variantId,
+        quantity: currentItem.quantity,
+        unitPrice: price,
+        shippingAddress: address,
+        sellerId: currentItem.product.sellerId || currentItem.product.userId,
+        customerName: auth.user.storename || auth.user.name || 'Customer',
+        customerEmail: auth.user.email || 'customer@example.com',
+        customerPhone: auth.user.phoneNumber || auth.user.phone || '9999999999',
+        cartItemId: currentItem.cartItemId // Pass cart item ID for deletion
+      };
+      
+      console.log('Single item payment order data:', orderData);
+      setPaymentOrderData(orderData);
+      setShowPaymentModal(true);
+      return;
+    } else {
+      // Bulk order - create a consolidated Cashfree payment
+      console.log('Processing bulk order via Cashfree');
+      
+      // Calculate total amount for bulk order
+      const bulkTotalAmount = orderItems.reduce((total, item) => {
+        const variant = getVariantForOrderItem(item);
+        const price = (variant?.price || variant?.Price || item.product?.price || 0);
+        return total + (price * item.quantity);
+      }, 0);
+      
+      // For bulk orders, we'll create a single payment session for the total amount
+      // and then create individual orders on the backend after payment success
+      const bulkOrderData = {
+        buyerId: auth.user.id,
+        isBulkOrder: true,
+        totalAmount: bulkTotalAmount,
+        orderItems: orderItems.map(item => {
+          const variant = getVariantForOrderItem(item);
+          const price = (variant?.price || variant?.Price || item.product?.price || 0);
+          return {
+            productId: item.product.id,
+            productName: item.product.name,
+            variantId: item.variantId,
+            quantity: item.quantity,
+            unitPrice: price,
+            sellerId: item.product.sellerId || item.product.userId,
+            cartItemId: item.cartItemId // Pass cart item ID for deletion
+          };
+        }),
+        shippingAddress: address,
+        customerName: auth.user.storename || auth.user.name || 'Customer',
+        customerEmail: auth.user.email || 'customer@example.com',
+        customerPhone: auth.user.phoneNumber || auth.user.phone || '9999999999',
+        cartItemIds: cartItemIds, // Pass cart item IDs for bulk deletion
+        isFullCartCheckout: isFullCartCheckout
+      };
+      
+      console.log('Bulk order payment data:', bulkOrderData);
+      setPaymentOrderData(bulkOrderData);
+      setShowPaymentModal(true);
+      return;
     }
+
+
   };
 
   return (
@@ -543,6 +558,13 @@ const OrderPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Cashfree Payment Modal */}
+      <CashfreePayment
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        orderData={paymentOrderData}
+      />
     </div>
   );
 };

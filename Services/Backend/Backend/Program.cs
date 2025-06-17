@@ -84,6 +84,10 @@ namespace Backend
                 builder.Services.AddTransient<ITwilioVerify, TwilioVerify>();
                 builder.Services.AddTransient<IPasswordResetService, PasswordResetService>();
 
+                // Register Cashfree services
+                builder.Services.Configure<CashfreeConfig>(builder.Configuration.GetSection("Cashfree"));
+                builder.Services.AddHttpClient<ICashfreeService, CashfreeService>();
+
                 // Add CORS policy
                 builder.Services.AddCors(options =>
                 {

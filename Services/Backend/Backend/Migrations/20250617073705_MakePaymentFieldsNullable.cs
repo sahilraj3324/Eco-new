@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Backend.Migrations
 {
     /// <inheritdoc />
-    public partial class CreateBannerTable : Migration
+    public partial class MakePaymentFieldsNullable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -411,11 +411,18 @@ namespace Backend.Migrations
                     VariantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    SellerId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SellerId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     OrderDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ProcessedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ShippingAddress = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    ShippingAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CashfreeOrderId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PaymentReference = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {

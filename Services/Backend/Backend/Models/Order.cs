@@ -26,7 +26,7 @@ namespace Backend.Models
 
         public decimal UnitPrice { get; set; }
 
-        public string SellerId { get; set; } // Can be pulled from the Product
+        public string? SellerId { get; set; } // Can be pulled from the Product
 
         public string Status { get; set; } = "Pending"; // Pending, Processed, Shipped, Delivered, Cancelled
 
@@ -34,6 +34,21 @@ namespace Backend.Models
 
         public DateTime? ProcessedAt { get; set; }
 
-        public string ShippingAddress { get; set; }
+        public string? ShippingAddress { get; set; }
+
+        // Payment-related fields for Cashfree integration
+        public string? PaymentId { get; set; } // Cashfree Payment ID
+        
+        public string PaymentStatus { get; set; } = "INITIATED"; // INITIATED, SUCCESS, FAILED, PENDING
+        
+        public string? CashfreeOrderId { get; set; } // Cashfree Order ID
+        
+        public decimal TotalAmount { get; set; } // Total amount (UnitPrice * Quantity)
+        
+        public string? PaymentMethod { get; set; } // Payment method used (UPI, Card, etc.)
+        
+        public DateTime? PaymentDate { get; set; } // When payment was completed
+        
+        public string? PaymentReference { get; set; } // Additional payment reference from Cashfree
     }
 }

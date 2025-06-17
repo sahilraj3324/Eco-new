@@ -13,7 +13,10 @@ const OrderSuccessPage = () => {
     sellers,
     orderItemsForStock,
     cartItemIds,
-    isFullCartCheckout
+    isFullCartCheckout,
+    paymentId,
+    paymentMethod,
+    isPaymentSuccess
   } = location.state || {};
 
   const [isUpdatingStock, setIsUpdatingStock] = useState(true);
@@ -383,6 +386,38 @@ const OrderSuccessPage = () => {
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Information Display */}
+              {isPaymentSuccess && paymentId && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200 mb-8">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white rounded-xl p-4 border border-green-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Payment ID</span>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                      <span className="font-mono text-sm text-gray-800 font-medium">#{paymentId}</span>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border border-green-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Payment Method</span>
+                        <Shield className="h-4 w-4 text-green-600" />
+                      </div>
+                      <span className="text-sm text-gray-800 font-medium">{paymentMethod || 'Online Payment'}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-green-100 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-700">Payment successful! Your order is confirmed.</span>
+                    </div>
                   </div>
                 </div>
               )}
