@@ -126,11 +126,11 @@ const Navbar = () => {
         }`}
       >
         {[
-          { name: 'Men', icon: User },
-          { name: 'Women', icon: User },
-          { name: 'Cart', icon: ShoppingCart , link: "/cart"},
-          { name: 'Become a Seller', icon: Store }
-        ].map(({ name, icon: Icon , link }) => (
+          { name: 'Men', icon: User, link: "/allproduct" },
+          { name: 'Women', icon: User, link: "/allproduct" },
+          { name: 'Cart', icon: ShoppingCart, link: "/cart" },
+          { name: 'Become a Seller', icon: Store, link: "/becomeseller" }
+        ].map(({ name, icon: Icon, link }) => (
           <Link key={name} to={link} className="flex items-center gap-1 hover:text-purple-600 font-medium">
             <Icon size={16} />
             {name}
@@ -164,6 +164,13 @@ const Navbar = () => {
                 onClick={() => setIsProfileDropdownOpen(false)}
               >
                 <Package size={16} /> Orders
+              </Link>
+              <Link 
+                to="/allorder" 
+                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 transition-colors duration-150"
+                onClick={() => setIsProfileDropdownOpen(false)}
+              >
+                <Package size={16} /> All Orders
               </Link>
               <Link 
                 to="/wishlist" 

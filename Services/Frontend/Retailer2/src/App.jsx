@@ -26,6 +26,7 @@ import RefundPolicy from './Pages/Retailers/Footer/refundPolicy';
 import TermsOfUse from './Pages/Retailers/Footer/terms_of_use';
 import FAQ from './Pages/Retailers/Footer/faq';
 import AuthDebug from './Pages/Debug/AuthDebug';
+import BecomeSeller from './Pages/Retailers/Footer/becomeSeller';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -57,6 +58,7 @@ function App() {
           <Route path="/refundPolicy" element={<RefundPolicy />} />
           <Route path="/terms_of_use" element={<TermsOfUse />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/becomeSeller" element={<BecomeSeller />} />
         </Routes>
         <Footer />
       </AuthProvider>

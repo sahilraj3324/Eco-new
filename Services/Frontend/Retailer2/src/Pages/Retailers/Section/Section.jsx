@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import HomeRetailer from "../Home/HomeRetailer";
 
 
 const Section = () => {
     const [activePage, setActivePage] = useState("home");
+    const navigate = useNavigate();
 
     const renderContent = () => {
       switch (activePage) {
@@ -30,6 +32,8 @@ const Section = () => {
             <li><button variant="ghost" onClick={() => setActivePage("about")}>About</button></li>
             <li><button variant="ghost" onClick={() => setActivePage("services")}>Services</button></li>
             <li><button variant="ghost" onClick={() => setActivePage("contact")}>Contact</button></li>
+            <li><button variant="ghost" onClick={() => navigate("/allorder")}>All Orders</button></li>
+            <li><button variant="ghost" onClick={() => navigate("/becomeseller")}>Become Seller</button></li>
           </ul>
         </aside>
         
