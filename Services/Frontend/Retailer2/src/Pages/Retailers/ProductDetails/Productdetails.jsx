@@ -490,7 +490,7 @@ const ProductDetails = () => {
                 </div>
 
                 {/* Thumbnails */}
-                <div className="flex space-x-3 overflow-x-auto pb-2">
+                <div className="flex space-x-3 overflow-x-auto p-2">
                   {product.imageUrls?.map((img, idx) => (
                     <div 
                       key={idx}

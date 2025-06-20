@@ -1,15 +1,22 @@
 import axios from 'axios';
 
+// Get API base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7209';
+
 // Configure axios defaults for all API calls
 axios.defaults.withCredentials = true;
+axios.defaults.baseURL = API_BASE_URL;
 
 // Base API configuration
 const api = axios.create({
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+console.log(`🌐 API Base URL: ${API_BASE_URL}`);
 
 // Add request interceptor for logging
 api.interceptors.request.use((config) => {

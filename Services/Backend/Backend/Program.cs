@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using DotNetEnv; // Add this for environment variables
 
 namespace Backend
 {
@@ -14,7 +15,25 @@ namespace Backend
     {
         public static void Main(string[] args)
         {
+            // Load environment variables from .env file
+            var envFile = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production" 
+                ? ".env.production" 
+                : ".env";
+            
+            if (File.Exists(envFile))
+            {
+                Env.Load(envFile);
+                Console.WriteLine($"✅ Loaded environment variables from {envFile}");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️  Environment file {envFile} not found, using system/configuration variables");
+            }
+
             var builder = WebApplication.CreateBuilder(args);
+            
+            // Override configuration with environment variables
+            OverrideConfigurationWithEnvironmentVariables(builder.Configuration);
             
             try
             {
@@ -147,9 +166,13 @@ namespace Backend
                     app.UseSwaggerUI();
                 }
 
-                app.UseHttpsRedirection();
+                // Only use HTTPS redirection in production
+                if (!app.Environment.IsDevelopment())
+                {
+                    app.UseHttpsRedirection();
+                }
 
-                // Enable CORS
+                // Enable CORS (must be before authentication)
                 app.UseCors("AllowFrontend");
 
                 // Authentication middleware
@@ -166,6 +189,58 @@ namespace Backend
                 Console.WriteLine($"❌ Application failed to start: {ex.Message}");
                 Console.WriteLine($"📝 Full error: {ex}");
                 throw;
+            }
+        }
+
+        private static void OverrideConfigurationWithEnvironmentVariables(IConfiguration configuration)
+        {
+            // Override connection strings
+            var connectionStrings = new Dictionary<string, string>
+            {
+                ["DefaultConnection"] = Environment.GetEnvironmentVariable("CONNECTION_STRING_DEFAULT"),
+                ["SahilConnection"] = Environment.GetEnvironmentVariable("CONNECTION_STRING_SAHIL"),
+                ["BevanConnection"] = Environment.GetEnvironmentVariable("CONNECTION_STRING_BEVAN"),
+                ["ShivuConnection"] = Environment.GetEnvironmentVariable("CONNECTION_STRING_SHIVU")
+            };
+
+            foreach (var kvp in connectionStrings)
+            {
+                if (!string.IsNullOrEmpty(kvp.Value))
+                {
+                    configuration[$"ConnectionStrings:{kvp.Key}"] = kvp.Value;
+                }
+            }
+
+            // Override other configuration sections
+            var configs = new Dictionary<string, string>
+            {
+                // Twilio
+                ["Twilio:AccountSid"] = Environment.GetEnvironmentVariable("TWILIO_ACCOUNT_SID"),
+                ["Twilio:AuthToken"] = Environment.GetEnvironmentVariable("TWILIO_AUTH_TOKEN"),
+                ["Twilio:VerifySid"] = Environment.GetEnvironmentVariable("TWILIO_VERIFY_SID"),
+                
+                // JWT
+                ["Jwt:Key"] = Environment.GetEnvironmentVariable("JWT_KEY"),
+                ["Jwt:Issuer"] = Environment.GetEnvironmentVariable("JWT_ISSUER"),
+                ["Jwt:Audience"] = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
+                ["Jwt:ExpireMinutes"] = Environment.GetEnvironmentVariable("JWT_EXPIRE_MINUTES"),
+                
+                // Cashfree
+                ["Cashfree:ClientId"] = Environment.GetEnvironmentVariable("CASHFREE_CLIENT_ID"),
+                ["Cashfree:ClientSecret"] = Environment.GetEnvironmentVariable("CASHFREE_CLIENT_SECRET"),
+                ["Cashfree:BaseUrl"] = Environment.GetEnvironmentVariable("CASHFREE_BASE_URL"),
+                ["Cashfree:Version"] = Environment.GetEnvironmentVariable("CASHFREE_VERSION"),
+                
+                // General
+                ["AllowedHosts"] = Environment.GetEnvironmentVariable("ALLOWED_HOSTS")
+            };
+
+            foreach (var kvp in configs)
+            {
+                if (!string.IsNullOrEmpty(kvp.Value))
+                {
+                    configuration[kvp.Key] = kvp.Value;
+                }
             }
         }
 

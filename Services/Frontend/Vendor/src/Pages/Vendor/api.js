@@ -1,5 +1,14 @@
 import axios from 'axios';
 
+// Get API base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5261';
+
+// Configure axios defaults
+axios.defaults.baseURL = API_BASE_URL;
+axios.defaults.withCredentials = true;
+
+console.log(`🌐 Vendor API Base URL: ${API_BASE_URL}`);
+
 const api = {
   // Product API endpoints
   product: {

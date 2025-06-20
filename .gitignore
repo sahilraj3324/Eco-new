@@ -367,3 +367,23 @@ FodyWeavers.xsd
 Services/Backend/Backend/appsettings.json
 Services/Backend/Backend/appsettings.Development.json
 Services/Backend/Backend/Program.cs
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Frontend environment files
+Services/Frontend/*/.env
+Services/Frontend/*/.env.local
+Services/Frontend/*/.env.development
+Services/Frontend/*/.env.production
+Services/Frontend/*/.env.test
+
+# Backend environment files
+Services/Backend/Backend/.env
+Services/Backend/Backend/.env.local
+Services/Backend/Backend/.env.development
+Services/Backend/Backend/.env.production
+Services/Backend/Backend/.env.test
