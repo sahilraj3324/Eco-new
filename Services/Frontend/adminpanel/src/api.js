@@ -1,8 +1,13 @@
 import axios from 'axios';
 
+// Get API base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5261';
+
+console.log(`🌐 Admin Panel API Base URL: ${API_BASE_URL}`);
+
 // API base URL options
 const PROXY_URL = '/api';
-const DIRECT_URL = 'https://localhost:7209/api';
+const DIRECT_URL = `${API_BASE_URL}/api`;
 
 // Create axios instances
 const proxyAxios = axios.create({
