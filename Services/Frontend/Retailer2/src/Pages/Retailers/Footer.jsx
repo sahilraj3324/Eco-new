@@ -14,7 +14,7 @@ const footerSections = [
   {
     title: "Seller",
     links: [
-      { label: "Become A Seller", path: "/seller/signup" },
+      { label: "Become A Seller", path: "/becomeseller" },
       { label: "Add Products", path: "/seller/add-product" },
       { label: "Manage Products", path: "/seller/products" },
       { label: "My Profile", path: "/seller/profile" },
@@ -40,6 +40,7 @@ const footerSections = [
       { label: "My Cart", path: "/cart" },
       { label: "My Wishlist", path: "/wishlist" },
       { label: "My Account", path: "/profile" },
+      { label: "All Orders", path: "/allorder" },
       { label: "Help & Support", path: "/helpSupport" },
     ],
   },

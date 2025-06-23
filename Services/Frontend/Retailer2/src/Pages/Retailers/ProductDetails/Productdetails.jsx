@@ -13,6 +13,7 @@ const ProductDetails = () => {
   const [mainImage, setMainImage] = useState(fallbackImage);
   const [selectedVariants, setSelectedVariants] = useState({});
   const [selectedSize, setSelectedSize] = useState('');
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const navigate = useNavigate();
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const { user, isAuthenticated } = useAuthContext();
@@ -40,10 +41,13 @@ const ProductDetails = () => {
         // Set main image robustly
         if (data.imageUrls.length > 0) {
           setMainImage(data.imageUrls[0]);
+          setCurrentImageIndex(0);
         } else if (data.mainImage) {
           setMainImage(data.mainImage);
+          setCurrentImageIndex(0);
         } else {
           setMainImage(fallbackImage);
+          setCurrentImageIndex(0);
         }
 
         // Initialize selected variants for each color
@@ -432,6 +436,34 @@ const ProductDetails = () => {
     return colorMap[normalizedColor] || colorMap[colorName] || '#6B7280'; // Default to gray-500 if color not found
   };
 
+  // Image navigation functions
+  const handlePreviousImage = () => {
+    if (!product?.imageUrls || product.imageUrls.length === 0) return;
+    
+    const newIndex = currentImageIndex === 0 
+      ? product.imageUrls.length - 1 
+      : currentImageIndex - 1;
+    
+    setCurrentImageIndex(newIndex);
+    setMainImage(product.imageUrls[newIndex]);
+  };
+
+  const handleNextImage = () => {
+    if (!product?.imageUrls || product.imageUrls.length === 0) return;
+    
+    const newIndex = currentImageIndex === product.imageUrls.length - 1 
+      ? 0 
+      : currentImageIndex + 1;
+    
+    setCurrentImageIndex(newIndex);
+    setMainImage(product.imageUrls[newIndex]);
+  };
+
+  const handleThumbnailClick = (img, index) => {
+    setMainImage(img);
+    setCurrentImageIndex(index);
+  };
+
   // Callback function for when a review is successfully submitted
   const handleReviewSubmitted = (reviewData) => {
     console.log('Review submitted successfully:', reviewData);
@@ -453,13 +485,13 @@ const ProductDetails = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Breadcrumb */}
-        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
+        {/* <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
           <span className="cursor-pointer hover:text-cyan-600 transition-colors">Home</span>
           <ChevronRight className="w-4 h-4" />
           <span className="cursor-pointer hover:text-cyan-600 transition-colors">Products</span>
           <ChevronRight className="w-4 h-4" />
           <span className="text-black font-medium">{product.name}</span>
-        </nav>
+        </nav> */}
 
         {/* Product Details Section */}
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden mb-12">
@@ -470,7 +502,10 @@ const ProductDetails = () => {
               <div className="sticky top-8">
                 {/* Main Image */}
                 <div className="relative mb-6 group">
-                  <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-lg">
+                  <div 
+                    className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-lg cursor-pointer"
+                    onClick={handleNextImage}
+                  >
                     <img 
                       src={mainImage} 
                       alt="Main Product" 
@@ -479,14 +514,38 @@ const ProductDetails = () => {
                   </div>
 
                   {/* Image Navigation Overlay */}
-                  <div className="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white transition-colors">
-                      <ChevronLeft className="w-5 h-5 text-gray-700" />
-                    </button>
-                    <button className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white transition-colors">
-                      <ChevronRight className="w-5 h-5 text-gray-700" />
-                    </button>
-                  </div>
+                  {product.imageUrls && product.imageUrls.length > 1 && (
+                    <div className="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <button 
+                        onClick={handlePreviousImage}
+                        className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white transition-all duration-200 hover:scale-110"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-gray-700" />
+                      </button>
+                      <button 
+                        onClick={handleNextImage}
+                        className="bg-white/80 backdrop-blur-sm rounded-full p-2 shadow-lg hover:bg-white transition-all duration-200 hover:scale-110"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight className="w-5 h-5 text-gray-700" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Image Counter */}
+                  {product.imageUrls && product.imageUrls.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium">
+                      {currentImageIndex + 1} / {product.imageUrls.length}
+                    </div>
+                  )}
+
+                  {/* Click to Navigate Hint */}
+                  {product.imageUrls && product.imageUrls.length > 1 && (
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs opacity-70">
+                      Click to navigate
+                    </div>
+                  )}
                 </div>
 
                 {/* Thumbnails */}
@@ -494,9 +553,9 @@ const ProductDetails = () => {
                   {product.imageUrls?.map((img, idx) => (
                     <div 
                       key={idx}
-                      onClick={() => setMainImage(img)}
+                      onClick={() => handleThumbnailClick(img, idx)}
                       className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
-                        mainImage === img 
+                        currentImageIndex === idx 
                           ? 'ring-3 ring-cyan-500 ring-offset-2 shadow-lg scale-105' 
                           : 'hover:ring-2 hover:ring-cyan-300 hover:ring-offset-1 hover:scale-105'
                       }`}
